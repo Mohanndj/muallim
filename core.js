@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 5;
+const APP_VERSION = 6;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -68,7 +68,7 @@ function normalize(d) {
   const evals = arr(d.evals).filter((e) => e && e.k && e.name).map((e) => ({ k: String(e.k), name: String(e.name), g: faName(e.g) ? e.g : 'check', c: String(e.c || '#5fcf80'), w: Number(e.w) || 0 }));
   return {
     ...d,
-    settings: { ...st, teacher: String(st.teacher || ''), subject: String(st.subject || 'الدراسات الإسلامية') },
+    settings: { ...st, teacher: String(st.teacher || ''), subject: String(st.subject || 'الدراسات الإسلامية'), school: String(st.school || '') },
     evals: evals.length ? evals : EVAL_DEFAULT.map(([k, name, g, c, w]) => ({ k, name, g, c, w })),
     yw: arr(d.yw).length ? d.yw : YW_DEFAULT.map(([k, name, max]) => ({ k, name, max })),
     classes: arr(d.classes).filter((c) => c && c.id).map((c) => ({ id: c.id, name: String(c.name || '') })),

@@ -51,10 +51,17 @@ function viewFollow() {
       const slots = Array.from({ length: 10 }, (_, i) => used[pg * 10 + i]);
       return `<div class="scard" data-act="eval-open" data-id="${s.id}">
         <div class="sc-av">${AVATAR}</div>
-        <div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}</b><span class="sc-x"><span class="pill-blue">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
+        <div class="sc-body"><div class="sc-top"><span class="sc-nm"><b class="sc-name">${esc(s.name)}</b>${stuTags(s)}</span><span class="sc-x"><span class="pill-blue">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
           <div class="slots">${slots.map((u) => { if (!u) return '<i class="slot"></i>'; const e = evalOf(u.k); return `<i class="slot on" style="--c:${e ? e.c : '#9aa3ad'}" title="${esc(u.name)}">${ic(e ? e.g : 'check')}${u.n > 1 ? `<b>${u.n}</b>` : ''}</i>`; }).join('')}</div>
           <div class="pager">${Array.from({ length: pages }, (_, i) => `<button type="button" class="${i === pg ? 'on' : ''}" data-act="stu-page" data-id="${s.id}" data-p="${i}" aria-label="صفحة ${i + 1}"></button>`).join('')}</div></div></div>`;
     }).join('')}</div>`;
+}
+// ما يظهر تحت اسم الطالب: مهمته في الفصل، وأوسمته، وخروجه من الحصة الآن
+function stuTags(s) {
+  const roles = rolesOf(s), bs = badgesOf(s.id), out = isOut(s.id);
+  if (!roles.length && !bs.length && !out) return '';
+  const seen = [...new Set(bs.map((b) => b.k))];
+  return `<span class="sc-tags">${out ? `<em class="tag out">${ic('hourglass-half')} خارج الفصل</em>` : ''}${roles.map((r) => `<em class="tag role">${ic('crown')} ${r}</em>`).join('')}${seen.map((k) => { const B = BADGES.find((x) => x[0] === k); return B ? `<i class="bdg-mini" style="--c:${B[3]}" title="${B[1]}">${ic(B[2])}</i>` : ''; }).join('')}</span>`;
 }
 Acts['stu-page'] = (el) => { stuPage[el.dataset.id] = Number(el.dataset.p); render(); };
 

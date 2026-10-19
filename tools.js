@@ -205,16 +205,6 @@ Acts['cls-del'] = (el) => {
 };
 
 // ---- الطالب ----
-Acts['stu-more'] = (el) => {
-  const s = stuOf(el.dataset.id);
-  const recent = behOf(s.id).sort((a, b) => b.at - a.at);
-  openSheet(`<div class="ev-head small">${AVATAR}<b>${esc(s.name)}</b></div>
-    <div class="menu"><button type="button" data-act="send-file" data-id="${s.id}"${phoneOk(s.phone) ? '' : ' disabled'}>${ic('send')}<span>أرسل ملفه لولي الأمر (واتساب)${phoneOk(s.phone) ? '' : ': أضف جواله أولاً'}</span></button>
-    <button type="button" data-act="stu-edit" data-id="${s.id}">${ic('edit')}<span>بيانات الطالب وجوال ولي أمره</span></button></div>
-    <h4>سجل التقييمات (${recent.length})</h4>${recent.length ? `<ul class="log">${recent.map((b) => { const e = evalOf(b.icon); return `<li><i style="--c:${e ? e.c : '#9aa3ad'}">${ic(e ? e.g : 'check')}</i><span class="grow">${esc(b.reason)}</span><em>${fmt1(b.w)}</em><small>${dateLabel(b.d)}</small><button type="button" class="x" data-act="ev-del" data-id="${b.id}" data-s="${s.id}" aria-label="احذف">${ic('x')}</button></li>`; }).join('')}</ul>` : '<p class="hint">لا تقييمات بعد.</p>'}
-    <p class="hint">الغياب: ${attCount(s, 'a')} | التأخر: ${attCount(s, 'l')} | الاستئذان: ${attCount(s, 'x')}</p>`);
-};
-Acts['ev-del'] = (el) => { if (!armed(el)) return; T.beh = T.beh.filter((b) => b.id !== el.dataset.id); save(); render(); Acts['stu-more']({ dataset: { id: el.dataset.s } }); };
 function stuForm(s) {
   return `<form data-submit="stu-save" data-id="${s ? s.id : ''}"><h3>${s ? 'بيانات الطالب' : 'طالب جديد'}</h3>
     <label>اسم الطالب<input name="name" required value="${esc(s ? s.name : '')}"></label>
@@ -240,6 +230,8 @@ Acts['stu-del'] = (el) => {
   delete T.marksYW[id];
   for (const g of T.groups) g.members = g.members.filter((m) => m !== id);
   for (const days of Object.values(T.att)) for (const day of Object.values(days)) delete day[id];
+  for (const k of ['badges', 'snotes', 'plans', 'exits', 'weak', 'problems', 'refers', 'honors']) if (T[k]) delete T[k][id];
+  for (const roles of Object.values(T.roles || {})) for (const r of Object.keys(roles)) if (roles[r] === id) delete roles[r];
   save(); closeSheet(); render();
 };
 
@@ -325,7 +317,8 @@ Acts.xlsx = () => {
 // ---- الإعدادات ----
 Views.settings = () => `<header class="home-h"><div><h1>الإعدادات</h1></div></header>
   <form class="card" data-submit="set-save"><label>اسمك (في رسائل أولياء الأمور)<input name="teacher" value="${esc(T.settings.teacher)}" placeholder="مثل: أ. محمد"></label>
-    <label>المادة<input name="subject" value="${esc(T.settings.subject)}"></label><button class="blue-btn wide">احفظ</button></form>
+    <label>المادة<input name="subject" value="${esc(T.settings.subject)}"></label>
+    <label>المدرسة (تظهر في الأوراق المطبوعة)<input name="school" value="${esc(T.settings.school || '')}"></label><button class="blue-btn wide">احفظ</button></form>
   <div class="card"><h3>أيقونات التقييم</h3><p class="hint">اسم كل تقييم ودرجته (موجبة أو سالبة).</p>
     <div class="ev-edit">${T.evals.map((e) => `<div class="eve"><button type="button" class="eve-i" style="--c:${e.c}" data-act="eve-icon" data-k="${e.k}" aria-label="غيّر الأيقونة">${ic(e.g)}</button><input data-input="eve-name" data-k="${e.k}" value="${esc(e.name)}"><input class="eve-w" inputmode="decimal" dir="ltr" data-input="eve-w" data-k="${e.k}" value="${e.w}"><button type="button" class="x" data-act="eve-del" data-k="${e.k}" aria-label="احذف">${ic('trash')}</button></div>`).join('')}</div>
     <button type="button" class="ghost-btn wide" data-act="eve-add">${ic('plus')} أضف تقييماً</button></div>
@@ -334,7 +327,7 @@ Views.settings = () => `<header class="home-h"><div><h1>الإعدادات</h1><
     <div class="row2"><button type="button" class="ghost-btn" data-act="bk-out">${ic('down')} احفظ نسخة</button><label class="ghost-btn file">${ic('up')} استرجع نسخة<input type="file" id="bkIn" accept=".json,application/json" hidden></label></div></div>
   <div class="card"><button type="button" class="red-btn wide" data-act="wipe">امسح كل البيانات</button></div>
   <p class="ver">مساعد المعلم | الإصدار ${APP_VERSION}<br>الأيقونات: Font Awesome Free (CC BY 4.0)</p>`;
-Acts['set-save'] = (f) => { T.settings.teacher = f.elements.teacher.value.trim(); T.settings.subject = f.elements.subject.value.trim() || 'الدراسات الإسلامية'; save(); render(); toast('حُفظ'); };
+Acts['set-save'] = (f) => { T.settings.teacher = f.elements.teacher.value.trim(); T.settings.school = f.elements.school.value.trim(); T.settings.subject = f.elements.subject.value.trim() || 'الدراسات الإسلامية'; save(); render(); toast('حُفظ'); };
 Inputs['eve-name'] = (el) => { const e = evalOf(el.dataset.k); if (el.value.trim()) { e.name = el.value.trim(); save(); } };
 Inputs['eve-w'] = (el) => { const v = num(el.value); if (v !== null) { evalOf(el.dataset.k).w = v; save(); } };
 Inputs['yw-name'] = (el) => { const y = T.yw.find((x) => x.k === el.dataset.k); if (el.value.trim()) { y.name = el.value.trim(); save(); } };
