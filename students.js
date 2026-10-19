@@ -2,65 +2,71 @@
 // The classes and their students (with the parent's name and WhatsApp number), importing them
 // from an Excel file or pasted lines, and the settings page with the backup.
 
+const backBtn = `<button type="button" class="back" data-act="go" data-tab="home">${ic('back')} الرئيسية</button>`;
+
 Views.students = () => {
   if (!T.classes.length) {
-    return `<h2>الطلاب</h2>
-      <div class="card"><p>ابدأ بإضافة فصل، ثم أضف طلابه واحداً واحداً أو من ملف إكسل (مثل كشف الطلاب من نظام نور).</p>
-      <button type="button" class="primary" data-act="cls-new">＋ أضف فصلاً</button></div>`;
+    return `${backBtn}${pageHead('طلابي', 'فصولك وطلابها وأرقام أولياء أمورهم')}
+      <div class="empty-state">${ic('users', 'big')}<h3>أضف فصلك الأول</h3><p>ثم أضف طلابه من ملف إكسل (كشف نور يصلح) أو بلصق أسمائهم.</p>
+      <button type="button" class="primary" data-act="cls-new">${ic('plus')} أضف فصلاً</button></div>`;
   }
   const c = curCls();
   const list = studentsIn(c);
   const noPhone = list.filter((s) => !phoneOk(s.phone)).length;
-  return `<h2>الطلاب</h2>
-    <div class="row-between">${classChips()}<button type="button" class="ghost sm" data-act="cls-new">＋ فصل</button></div>
+  return `${backBtn}${pageHead('طلابي', 'فصولك وطلابها وأرقام أولياء أمورهم', `<button type="button" class="ghost sm" data-act="cls-new">${ic('plus')} فصل</button>`)}
+    ${classChips() || `<div class="chips cls-chips"><span class="chip on">${esc(clsOf(c).name)}</span></div>`}
     <div class="card">
-      <div class="row-between"><h3>${esc(clsOf(c).name)}</h3><button type="button" class="ghost sm" data-act="cls-edit" data-id="${c}">✎ الفصل</button></div>
-      <div class="facts"><span>الطلاب: ${list.length}</span>${noPhone ? `<span class="warn">بلا رقم جوال: ${noPhone}</span>` : list.length ? '<span class="good">كل الطلاب لهم رقم</span>' : ''}</div>
-      <div class="btns"><button type="button" class="primary" data-act="stu-new">＋ طالب</button><button type="button" class="ghost" data-act="imp-open">📥 استيراد من إكسل أو نص</button></div>
+      <div class="row-between"><h3>${esc(clsOf(c).name)}${clsOf(c).demo ? ' <span class="tag">تجريبي</span>' : ''}</h3><button type="button" class="ghost sm" data-act="cls-edit" data-id="${c}">${ic('edit')} الفصل</button></div>
+      <div class="facts"><span>الطلاب: ${list.length}</span>${noPhone ? `<span class="warn">بلا رقم ولي أمر: ${noPhone}</span>` : list.length ? `<span class="good">${ic('check')} كل الطلاب لهم رقم</span>` : ''}</div>
+      <div class="btns"><button type="button" class="primary" data-act="imp-open">${ic('file')} أضف من إكسل أو بلصق الأسماء</button><button type="button" class="ghost" data-act="stu-new">${ic('plus')} طالب واحد</button></div>
     </div>
-    ${list.length ? `<ul class="list">${list.map((s, i) => `<li><button type="button" class="li-btn" data-act="stu-edit" data-id="${s.id}">
-      <span class="no">${i + 1}</span><span class="grow"><b>${esc(s.name)}</b>${s.parent ? `<small>${esc(s.parent)}</small>` : ''}</span>
-      ${phoneOk(s.phone) ? '<span class="tag good">واتساب ✓</span>' : '<span class="tag warn">بلا رقم</span>'}</button></li>`).join('')}</ul>` : '<p class="empty">لا طلاب في هذا الفصل بعد.</p>'}`;
+    ${list.length ? `<ul class="list">${list.map((s, i) => `<li><button type="button" class="li-btn" data-act="stu-profile" data-id="${s.id}">
+      <span class="no">${i + 1}</span>${avatar(s)}<span class="grow"><b>${esc(s.name)}</b>${s.parent ? `<small>${esc(s.parent)}</small>` : ''}</span>
+      ${phoneOk(s.phone) ? `<span class="tag good">${ic('phone')} رقم</span>` : '<span class="tag warn">بلا رقم</span>'}</button></li>`).join('')}</ul>` : '<p class="empty">لا طلاب في هذا الفصل بعد.</p>'}`;
 };
 
 Acts['cls-new'] = () => openSheet(`<form data-submit="cls-save"><h3>فصل جديد</h3>
-  <label>اسم الفصل<input name="name" required placeholder="مثل: أول متوسط ١"></label>
+  <label>اسم الفصل<input name="name" required placeholder="مثل: أول متوسط ٢"></label>
   <div class="sheet-actions"><button class="primary">احفظ</button><button type="button" class="ghost" data-act="close-sheet">إلغاء</button></div></form>`);
 Acts['cls-edit'] = (el) => {
   const c = clsOf(el.dataset.id);
   openSheet(`<form data-submit="cls-save" data-id="${c.id}"><h3>الفصل</h3>
   <label>اسم الفصل<input name="name" required value="${esc(c.name)}"></label>
-  <div class="sheet-actions"><button class="primary">احفظ</button><button type="button" class="danger" data-act="cls-del" data-id="${c.id}">احذف الفصل وطلابه</button></div></form>`);
+  <div class="sheet-actions"><button class="primary">احفظ</button><button type="button" class="danger" data-act="cls-del" data-id="${c.id}">${ic('trash')} احذف الفصل وطلابه</button></div></form>`);
 };
 Acts['cls-save'] = (f) => {
   const name = f.elements.name.value.trim();
   if (!name) return;
   if (f.dataset.id) clsOf(f.dataset.id).name = name;
   else { const c = { id: uid(), name }; T.classes.push(c); UI.cls = c.id; }
-  save(); closeSheet(); render();
+  save(); closeSheet(); go('students');
 };
-Acts['cls-del'] = (el) => {
-  if (!armed(el)) return;
-  const id = el.dataset.id;
+// a class and everything that belongs to it
+function delClass(id) {
   const sids = new Set(studentsIn(id).map((s) => s.id));
   T.classes = T.classes.filter((c) => c.id !== id);
   T.students = T.students.filter((s) => s.cls !== id);
   T.beh = T.beh.filter((b) => !sids.has(b.sid));
   T.sent = T.sent.filter((x) => !sids.has(x.sid));
+  T.groups = T.groups.filter((g) => g.cls !== id);
   for (const it of T.items.filter((i) => i.cls === id)) delete T.marks[it.id];
   T.items = T.items.filter((i) => i.cls !== id);
+  if (T.queue && T.queue.list.some((m) => sids.has(m.sid))) T.queue = null;
+}
+Acts['cls-del'] = (el) => {
+  if (!armed(el)) return;
+  delClass(el.dataset.id);
   save(); closeSheet(); render();
   toast('حُذف الفصل');
 };
 
 function stuForm(s) {
-  return `<form data-submit="stu-save" data-id="${s ? s.id : ''}"><h3>${s ? 'الطالب' : 'طالب جديد'}</h3>
+  return `<form data-submit="stu-save" data-id="${s ? s.id : ''}"><h3>${s ? 'بيانات الطالب' : 'طالب جديد'}</h3>
     <label>اسم الطالب<input name="name" required value="${esc(s ? s.name : '')}"></label>
-    <label>اسم ولي الأمر (اختياري)<input name="parent" value="${esc(s ? s.parent : '')}" placeholder="يظهر في الرسالة إن استعملت {ولي_الأمر}"></label>
+    <label>اسم ولي الأمر (اختياري)<input name="parent" value="${esc(s ? s.parent : '')}" placeholder="مثل: أبو عبدالله"></label>
     <label>جوال ولي الأمر (واتساب)<input name="phone" inputmode="tel" dir="ltr" class="latin" value="${esc(s ? s.phone : '')}" placeholder="05xxxxxxxx"></label>
     <label>الفصل<select name="cls">${T.classes.map((c) => `<option value="${c.id}"${(s ? s.cls : curCls()) === c.id ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}</select></label>
-    <div class="sheet-actions"><button class="primary">احفظ</button>${s ? `<button type="button" class="danger" data-act="stu-del" data-id="${s.id}">احذف</button>` : '<button type="button" class="ghost" data-act="close-sheet">إلغاء</button>'}</div>
-    ${s ? stuHistory(s) : ''}</form>`;
+    <div class="sheet-actions"><button class="primary">احفظ</button>${s ? `<button type="button" class="danger" data-act="stu-del" data-id="${s.id}">${ic('trash')} احذف الطالب</button>` : '<button type="button" class="ghost" data-act="close-sheet">إلغاء</button>'}</div></form>`;
 }
 Acts['stu-new'] = () => openSheet(stuForm(null));
 Acts['stu-edit'] = (el) => openSheet(stuForm(stuOf(el.dataset.id)));
@@ -69,8 +75,8 @@ Acts['stu-save'] = (f) => {
   if (!v('name')) return;
   const data = { name: v('name'), parent: v('parent'), phone: normPhone(v('phone')), cls: v('cls') };
   if (v('phone') && !phoneOk(data.phone)) { toast('رقم الجوال غير صحيح'); return; }
-  if (f.dataset.id) Object.assign(stuOf(f.dataset.id), data);
-  else T.students.push({ id: uid(), ...data });
+  if (f.dataset.id) { Object.assign(stuOf(f.dataset.id), data); save(); render(); stuProfile(f.dataset.id); return; }
+  T.students.push({ id: uid(), ...data });
   save(); closeSheet(); render();
 };
 Acts['stu-del'] = (el) => {
@@ -79,28 +85,22 @@ Acts['stu-del'] = (el) => {
   T.students = T.students.filter((s) => s.id !== id);
   T.beh = T.beh.filter((b) => b.sid !== id);
   T.sent = T.sent.filter((x) => x.sid !== id);
+  for (const g of T.groups) g.members = g.members.filter((m) => m !== id);
   for (const k of Object.keys(T.marks)) delete T.marks[k][id];
   save(); closeSheet(); render();
 };
-// what the teacher recorded and sent for one student, newest first
-function stuHistory(s) {
-  const b = T.beh.filter((x) => x.sid === s.id).sort((a, c) => c.at - a.at).slice(0, 15);
-  const m = T.sent.filter((x) => x.sid === s.id).sort((a, c) => c.at - a.at).slice(0, 5);
-  if (!b.length && !m.length) return '';
-  return `<div class="hist"><h4>سجلّه</h4>
-    ${b.map((x) => `<div class="hrow ${x.kind}"><span>${x.kind === 'pos' ? '＋' : '−'} ${esc(x.reason)}${x.note ? ` (${esc(x.note)})` : ''}</span><small>${dateLabel(x.d)}</small><button type="button" class="x" data-act="beh-del" data-id="${x.id}" aria-label="حذف">✕</button></div>`).join('')}
-    ${m.map((x) => `<div class="hrow msg"><span>💬 أُرسلت رسالة «${esc(x.name)}»</span><small>${dateLabel(iso(new Date(x.at)))}</small></div>`).join('')}</div>`;
-}
 
 // ---- import: an Excel file (any column order, the header row is looked for) or pasted lines ----
 let imp = null;
-Acts['imp-open'] = () => {
+Acts['imp-open'] = (el, e, intro) => {
   imp = null;
-  openSheet(`<h3>استيراد الطلاب</h3>
-    <p class="explain">ملف إكسل فيه عمود لاسم الطالب، وعمود لجوال ولي الأمر إن وُجد (كشف نظام نور يصلح). أو الصق الأسماء: كل طالب في سطر، وبعد اسمه رقم الجوال إن شئت.</p>
-    <label class="file-btn">📄 اختر ملف إكسل<input type="file" id="impFile" accept=".xlsx" hidden></label>
-    <label>أو الصق هنا<textarea id="impText" rows="6" placeholder="محمد عبدالله السالم 0551234567&#10;خالد أحمد العتيبي 0509876543"></textarea></label>
-    <button type="button" class="ghost" data-act="imp-text">اعرض ما فهمته</button>
+  openSheet(`${intro ? `<p class="step-k">${intro}</p>` : ''}<h3>أضف الطلاب</h3>
+    <div class="choice2">
+      <label class="pick-file">${ic('file')}<b>من ملف إكسل</b><small>كشف الطلاب من نظام نور أو أي ملف فيه عمود «اسم الطالب»</small><input type="file" id="impFile" accept=".xlsx" hidden></label>
+      <div class="pick-paste">${ic('edit')}<b>أو الصق الأسماء</b><small>كل طالب في سطر، وبعده جوال ولي أمره إن شئت</small></div>
+    </div>
+    <textarea id="impText" rows="6" placeholder="محمد عبدالله السالم 0551234567&#10;خالد أحمد العتيبي 0509876543"></textarea>
+    <button type="button" class="ghost" data-act="imp-text">${ic('eye')} اعرض ما فهمته</button>
     <div id="impPrev"></div>`);
 };
 document.addEventListener('change', async (e) => {
@@ -176,12 +176,12 @@ function impPreview(rows) {
   imp = rows;
   if (!rows.length) { $('impPrev').innerHTML = '<p class="warn">لم أجد أسماء طلاب. تأكد أن في الملف عموداً عنوانه «اسم الطالب» أو «الاسم».</p>'; return; }
   const bad = rows.filter((r) => r.phone && !phoneOk(r.phone)).length;
-  $('impPrev').innerHTML = `<div class="card soft"><div class="facts"><span>وجدت: ${rows.length} طالباً</span><span>لهم رقم: ${rows.filter((r) => phoneOk(r.phone)).length}</span>${bad ? `<span class="warn">أرقام غير مفهومة: ${bad}</span>` : ''}</div>
-    <ol class="prev">${rows.slice(0, 8).map((r) => `<li>${esc(r.name)}${r.phone ? ` <span class="latin" dir="ltr">${esc(r.phone)}</span>` : ''}${r.cls ? ` <small>(${esc(r.cls)})</small>` : ''}</li>`).join('')}${rows.length > 8 ? `<li>… و${rows.length - 8} غيرهم</li>` : ''}</ol>
+  $('impPrev').innerHTML = `<div class="card soft"><div class="facts"><span>وجدت: ${rows.length} طالباً</span><span class="good">لهم رقم: ${rows.filter((r) => phoneOk(r.phone)).length}</span>${bad ? `<span class="warn">أرقام غير مفهومة: ${bad}</span>` : ''}</div>
+    <ol class="prev">${rows.slice(0, 8).map((r) => `<li>${esc(r.name)}${r.phone ? ` <span class="latin muted" dir="ltr">${esc(r.phone)}</span>` : ''}${r.cls ? ` <small>(${esc(r.cls)})</small>` : ''}</li>`).join('')}${rows.length > 8 ? `<li class="more">و${rows.length - 8} غيرهم</li>` : ''}</ol>
     <label>أضفهم إلى<select id="impCls">${byCls.length > 1 ? '<option value="*">فصولهم كما في الملف (تُنشأ الفصول الناقصة)</option>' : ''}${T.classes.map((c) => `<option value="${c.id}"${c.id === UI.cls ? ' selected' : ''}>${esc(c.name)}</option>`).join('')}<option value="+">فصل جديد…</option></select></label>
     <input id="impNew" placeholder="اسم الفصل الجديد" value="${esc(byCls[0] || '')}" ${T.classes.length ? 'hidden' : ''}>
-    <p class="explain">الطالب الموجود بالاسم نفسه في الفصل لا يتكرر، ويُحدَّث رقمه إن كان في الملف رقم.</p>
-    <button type="button" class="primary" data-act="imp-go">أضف ${rows.length} طالباً</button></div>`;
+    <p class="hint">الطالب الموجود بالاسم نفسه في الفصل لا يتكرر، ويُحدَّث رقمه إن كان في الملف رقم.</p>
+    <button type="button" class="primary big" data-act="imp-go">${ic('check')} أضف ${rows.length} طالباً</button></div>`;
   arDigits($('impPrev'));
   if (!T.classes.length) $('impCls').value = byCls.length > 1 ? '*' : '+';
 }
@@ -205,6 +205,7 @@ Acts['imp-go'] = () => {
     added++;
   }
   UI.cls = pick === '*' ? UI.cls : target;
+  T.settings.onboarded = true;
   save(); closeSheet(); render();
   toast(`أُضيف ${added} طالباً${updated ? `، وحُدّث رقم ${updated}` : ''}`);
 };
@@ -212,27 +213,32 @@ Acts['imp-go'] = () => {
 // ---- settings and backup ----
 Views.settings = () => {
   const s = T.settings;
-  return `<h2>الإعدادات</h2>
-  <form class="card" data-submit="set-save">
-    <label>اسمك كما يظهر في الرسائل<input name="teacher" value="${esc(s.teacher)}" placeholder="معلم المادة: أ. …"></label>
+  return `${backBtn}${pageHead('الإعدادات', 'بياناتك، وما يُحسب في التطبيق، ونسختك الاحتياطية')}
+  <form class="card" data-submit="set-save"><h3>${ic('users')} بياناتك</h3>
+    <label>اسمك كما يظهر في الرسائل والشهادات<input name="teacher" value="${esc(s.teacher)}" placeholder="مثل: أ. محمد العتيبي"></label>
     <label>المادة<input name="subject" value="${esc(s.subject)}"></label>
     <label>المدرسة (اختياري)<input name="school" value="${esc(s.school)}"></label>
     <label>جوالك (واتساب) لتصلك نتائج الطلاب في الاختبارات<input name="phone" inputmode="tel" dir="ltr" class="latin" value="${esc(s.phone)}" placeholder="05xxxxxxxx"></label>
+    <h3 class="mt">${ic('alert')} التنبيهات</h3>
     <label>نبّهني إذا بلغت الملاحظات السلبية على طالب في الأسبوع<input name="negAlert" inputmode="numeric" value="${ar(s.negAlert)}"></label>
-    <label>حد التعثر في الدرجات (نسبة مئوية)<input name="pass" inputmode="numeric" value="${ar(s.pass)}"></label>
+    <label>الطالب متعثر إذا قلّت نسبته في الدرجات عن (٪)<input name="pass" inputmode="numeric" value="${ar(s.pass)}"></label>
     <label class="check"><input type="checkbox" name="showAns"${s.showAns ? ' checked' : ''}> يرى الطالب الإجابات الصحيحة بعد إنهاء الاختبار</label>
     <button class="primary">احفظ</button>
   </form>
-  <div class="card"><h3>أسباب الملاحظات</h3><p class="explain">كل سبب في سطر. تظهر أزراراً عند تسجيل ملاحظة على طالب.</p>
+  <div class="card"><h3>${ic('star')} أسباب الملاحظات وفروع المادة</h3><p class="hint">كل سبب في سطر. تظهر أزراراً عند تسجيل ملاحظة. كل ملاحظة إيجابية نقطة للطالب في مستواه ولوحة الشرف؛ والسلبية لا تظهر في شاشة الفصل أبداً.</p>
     <label>الإيجابية<textarea id="rPos" rows="5">${esc(T.reasons.pos.join('\n'))}</textarea></label>
     <label>السلبية<textarea id="rNeg" rows="5">${esc(T.reasons.neg.join('\n'))}</textarea></label>
     <label>فروع المادة (للدرجات والاختبارات)<textarea id="rSkills" rows="4">${esc(T.skills.join('\n'))}</textarea></label>
     <button type="button" class="primary" data-act="reasons-save">احفظ</button></div>
-  <div class="card"><h3>نسخة احتياطية</h3><p>بياناتك محفوظة في هذا الجوال فقط. احفظ نسخة من حين لآخر.</p>
-    <div class="btns"><button type="button" class="primary" data-act="bk-out">⬇ احفظ نسخة</button><label class="file-btn ghost">⬆ استرجع نسخة<input type="file" id="bkIn" accept=".json,application/json" hidden></label></div>
-    <button type="button" class="danger" data-act="wipe">امسح كل البيانات</button></div>
-  <p class="ver">الإصدار ${APP_VERSION}</p>`;
+  <div class="card"><h3>${ic('medal')} المستويات</h3><p class="hint">يرتقي الطالب بنقاطه في الفصل الدراسي:</p>
+    <div class="lv-list">${LEVELS.filter((l) => l.tier).map((l) => `<div>${levelBadge(l.min)}<small>من ${l.min} نقطة</small></div>`).join('')}</div></div>
+  <div class="card"><h3>${ic('down')} نسخة احتياطية</h3><p>بياناتك محفوظة في هذا الجوال فقط. احفظ نسخة من حين لآخر، وبها تنقل بياناتك إلى جهاز آخر (مثل حاسب الفصل).</p>
+    <div class="btns"><button type="button" class="primary" data-act="bk-out">${ic('down')} احفظ نسخة</button><label class="file-btn">${ic('up')} استرجع نسخة<input type="file" id="bkIn" accept=".json,application/json" hidden></label></div></div>
+  <div class="card"><h3>${ic('book')} عن التطبيق</h3><p class="hint">مساعد المعلم، الإصدار ${APP_VERSION}</p>
+    <div class="btns"><button type="button" class="ghost sm" data-act="welcome">أعد عرض الترحيب</button>${s.hideSetup ? '<button type="button" class="ghost sm" data-act="setup-show">أظهر خطوات البداية</button>' : ''}</div>
+    <button type="button" class="danger mt" data-act="wipe">${ic('trash')} امسح كل البيانات</button></div>`;
 };
+Acts['setup-show'] = () => { T.settings.hideSetup = false; save(); go('home'); };
 Acts['set-save'] = (f) => {
   const v = (k) => f.elements[k].value.trim();
   const ph = normPhone(v('phone'));
@@ -260,5 +266,6 @@ document.addEventListener('change', async (e) => {
 Acts.wipe = (el) => {
   if (!armed(el)) return;
   localStorage.removeItem(KEY);
-  load(); render(); toast('مُسحت البيانات');
+  load(); go('home'); openWelcome();
+  toast('مُسحت البيانات');
 };

@@ -36,34 +36,40 @@ function classAnalysis(cid) {
 }
 
 Views.grades = () => {
-  if (!T.classes.length) return `<h2>الدرجات</h2>${noClasses()}`;
+  const head = pageHead('الدرجات', 'أضف تقويماً وارصد درجاته؛ والنتائج والمتعثرون يُحسبون وحدهم', `<button type="button" class="primary sm" data-act="it-new">${ic('plus')} تقويم</button>`);
+  if (!T.classes.length) return `${pageHead('الدرجات', 'أضف تقويماً وارصد درجاته؛ والنتائج والمتعثرون يُحسبون وحدهم')}${noClasses()}`;
   const c = curCls();
   const tabs = `<div class="seg"><button type="button" class="${grUi.view === 'items' ? 'on' : ''}" data-act="gr-view" data-v="items">التقويمات</button><button type="button" class="${grUi.view === 'res' ? 'on' : ''}" data-act="gr-view" data-v="res">النتائج والمتعثرون</button></div>`;
-  return `<h2>الدرجات</h2>${classChips()}${tabs}${grUi.view === 'res' ? grResults(c) : grItems(c)}`;
+  return `${head}${classChips()}${tabs}${grUi.view === 'res' ? grResults(c) : grItems(c)}`;
 };
 Acts['gr-view'] = (el) => { grUi.view = el.dataset.v; render(); };
 
 function grItems(c) {
   const items = itemsOf(c);
   const n = studentsIn(c).length;
-  return `<div class="btns"><button type="button" class="primary" data-act="it-new">＋ تقويم جديد</button></div>
-    ${items.length ? `<ul class="list">${items.map((it) => {
-      const ms = studentsIn(c).map((s) => markOf(it.id, s.id)).filter((m) => m !== null);
-      const avg = ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null;
-      return `<li><button type="button" class="li-btn" data-act="it-open" data-id="${it.id}"><span class="grow"><b>${esc(it.title)}</b><small>${esc(it.skill || 'عام')} | ${dateLabel(it.d)} | من ${it.max}</small></span>
-        <span class="tag${ms.length < n ? ' warn' : ' good'}">رُصد ${ms.length} من ${n}</span>${avg !== null ? `<span class="tag">المتوسط ${round1(avg)}</span>` : ''}</button></li>`;
-    }).join('')}</ul>` : '<p class="empty">لا تقويمات بعد. أضف اختباراً قصيراً أو واجباً أو مشاركة، ثم ارصد درجاته.</p>'}`;
+  if (!items.length) return `<div class="empty-state">${ic('chart', 'big')}<h3>لا تقويمات بعد</h3><p>التقويم: اختبار قصير أو واجب أو مشاركة، له درجة كاملة وفرع من المادة.</p><button type="button" class="primary" data-act="it-new">${ic('plus')} أضف أول تقويم</button></div>`;
+  return `<ul class="list">${items.map((it) => {
+    const ms = studentsIn(c).map((s) => markOf(it.id, s.id)).filter((m) => m !== null);
+    const avg = ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : null;
+    return `<li><button type="button" class="li-btn" data-act="it-open" data-id="${it.id}"><span class="li-ic">${ic(it.quiz ? 'quiz' : 'chart')}</span><span class="grow"><b>${esc(it.title)}</b><small>${esc(it.skill || 'عام')} | ${dateLabel(it.d)} | من ${it.max}</small></span>
+      <span class="li-end">${avg !== null ? `<span class="tag">المتوسط ${round1(avg)}</span>` : ''}<span class="tag${ms.length < n ? ' warn' : ' good'}">رُصد ${ms.length} من ${n}</span></span></button></li>`;
+  }).join('')}</ul>`;
 }
 
 function itemForm(it) {
   return `<form data-submit="it-save" data-id="${it ? it.id : ''}"><h3>${it ? 'التقويم' : 'تقويم جديد'}</h3>
     <label>اسمه<input name="title" required value="${esc(it ? it.title : '')}" placeholder="مثل: اختبار قصير: التوحيد ١"></label>
-    <label>الدرجة الكاملة<input name="max" inputmode="decimal" required value="${ar(it ? it.max : 10)}"></label>
-    <label>الفرع<select name="skill"><option value="">عام</option>${T.skills.map((k) => `<option${it && it.skill === k ? ' selected' : ''}>${esc(k)}</option>`).join('')}</select></label>
-    <label>التاريخ<input name="d" type="date" value="${it ? it.d : today()}"></label>
-    <div class="sheet-actions"><button class="primary">${it ? 'احفظ' : 'احفظ وارصد الدرجات'}</button>${it ? `<button type="button" class="danger" data-act="it-del" data-id="${it.id}">احذفه ودرجاته</button>` : '<button type="button" class="ghost" data-act="close-sheet">إلغاء</button>'}</div></form>`;
+    <div class="two"><label>الدرجة الكاملة<input name="max" inputmode="decimal" required value="${ar(it ? it.max : 10)}"></label>
+    <label>التاريخ<input name="d" type="date" value="${it ? it.d : today()}"></label></div>
+    <label>الفرع</label><div class="chips wrap" id="skillPick">${['', ...T.skills].map((k) => `<button type="button" class="chip${(it ? it.skill : '') === k ? ' on' : ''}" data-act="skill-pick" data-v="${esc(k)}">${esc(k || 'عام')}</button>`).join('')}</div>
+    <input type="hidden" name="skill" value="${esc(it ? it.skill : '')}">
+    <div class="sheet-actions"><button class="primary">${it ? 'احفظ' : 'احفظ وارصد الدرجات'}</button>${it ? `<button type="button" class="danger" data-act="it-del" data-id="${it.id}">${ic('trash')} احذفه ودرجاته</button>` : '<button type="button" class="ghost" data-act="close-sheet">إلغاء</button>'}</div></form>`;
 }
-Acts['it-new'] = () => openSheet(itemForm(null));
+Acts['skill-pick'] = (el) => {
+  for (const b of el.parentElement.children) b.classList.toggle('on', b === el);
+  el.closest('form').elements.skill.value = el.dataset.v;
+};
+Acts['it-new'] = () => { if (!T.classes.length) { go('students'); return; } openSheet(itemForm(null)); };
 Acts['it-edit'] = (el) => openSheet(itemForm(T.items.find((i) => i.id === el.dataset.id)));
 Acts['it-save'] = (f) => {
   const max = num(f.elements.max.value);
@@ -73,6 +79,7 @@ Acts['it-save'] = (f) => {
   if (f.dataset.id) { Object.assign(T.items.find((i) => i.id === f.dataset.id), data); save(); closeSheet(); render(); return; }
   const it = { id: uid(), cls: curCls(), quiz: '', ...data };
   T.items.push(it);
+  grUi.view = 'items';
   save(); render();
   itEntry(it);
 };
@@ -88,11 +95,11 @@ Acts['it-open'] = (el) => itEntry(T.items.find((i) => i.id === el.dataset.id));
 function itEntry(it) {
   const list = studentsIn(it.cls);
   openSheet(`<h3>${esc(it.title)}</h3><p class="muted">من ${it.max} | ${esc(it.skill || 'عام')} | ${dateLabel(it.d)}</p>
-    <div class="btns"><button type="button" class="ghost sm" data-act="it-full" data-id="${it.id}">ضع الدرجة الكاملة لمن لم تُرصد له</button><button type="button" class="ghost sm" data-act="it-edit" data-id="${it.id}">✎ التقويم</button></div>
+    <div class="btns"><button type="button" class="ghost sm" data-act="it-full" data-id="${it.id}">${ic('check')} الدرجة الكاملة لمن لم تُرصد له</button><button type="button" class="ghost sm" data-act="it-edit" data-id="${it.id}">${ic('edit')} التقويم</button></div>
     <div class="marks">${list.map((s, i) => { const m = markOf(it.id, s.id); return `<label class="mrow"><span class="no">${i + 1}</span><span class="grow">${esc(s.name)}</span>
       <input inputmode="decimal" enterkeyhint="next" class="latin mark" data-input="mark" data-it="${it.id}" data-sid="${s.id}" value="${m === null ? '' : m}" placeholder="—"></label>`; }).join('')}</div>
-    <p class="hint">اترك الخانة فارغة للغائب؛ لا يُحسب عليه.</p>
-    <div class="sheet-actions"><button type="button" class="primary" data-act="close-sheet">تم</button></div>`);
+    <p class="hint">اترك الخانة فارغة للغائب؛ لا يُحسب عليه. وزر «التالي» في لوحة المفاتيح ينقلك للطالب التالي.</p>
+    <div class="sheet-actions"><button type="button" class="primary" data-act="close-sheet">${ic('check')} تم</button></div>`);
 }
 Inputs.mark = (el) => {
   const it = T.items.find((i) => i.id === el.dataset.it);
@@ -121,19 +128,19 @@ Acts['it-full'] = (el) => {
 
 function grResults(c) {
   const { list, skills, weak } = classAnalysis(c);
-  if (!itemsOf(c).length) return '<p class="empty">لا درجات بعد. أضف تقويماً وارصد درجاته من «التقويمات».</p>';
+  if (!itemsOf(c).length) return `<div class="empty-state">${ic('chart', 'big')}<p>لا درجات بعد. أضف تقويماً وارصد درجاته.</p><button type="button" class="primary" data-act="it-new">${ic('plus')} أضف تقويماً</button></div>`;
   const pass = T.settings.pass;
   const cls = (p) => (p >= 90 ? 'good' : p < pass ? 'bad' : '');
   const sk = Object.entries(skills).sort((a, b) => pct(a[1].got, a[1].max) - pct(b[1].got, b[1].max));
-  return `<div class="card"><h3>مستوى الفصل في كل فرع</h3>${sk.map(([k, v]) => { const p = pct(v.got, v.max); return `<div class="meter"><span>${esc(k)}</span><div class="bar"><i class="${cls(p)}" style="width:${p}%"></i></div><b class="${cls(p)}">${p}٪</b></div>`; }).join('')}
-      ${sk.length && pct(sk[0][1].got, sk[0][1].max) < 75 ? `<p class="hint">أضعف فرع: ${esc(sk[0][0])}؛ يستحق مراجعة للفصل كله.</p>` : ''}</div>
-    <div class="card ${weak.length ? 'alert' : ''}"><h3>المتعثرون (أقل من ${pass}٪): ${weak.length}</h3>
-      ${weak.length ? `${weak.map((x) => `<div class="hrow"><span><b>${esc(shortName(x.s))}</b> ${pct(x.g.got, x.g.max)}٪</span><small>${x.skills.map(([k, p]) => `${esc(k)} ${p}٪`).join('، ') || ''}</small></div>`).join('')}
-      <div class="btns"><button type="button" class="primary" data-act="plan-open">📋 الخطة العلاجية</button><button type="button" class="ghost" data-act="q-start" data-tpl="grades" data-sids="${weak.map((x) => x.s.id).join(',')}" data-period="month">💬 أرسل درجاتهم لأوليائهم</button></div>` : '<p class="good">لا متعثرين في هذا الفصل. ما شاء الله.</p>'}</div>
-    <div class="card"><h3>كل الطلاب</h3>
+  return `<div class="card"><h3>${ic('chart')} مستوى الفصل في كل فرع</h3>${sk.map(([k, v]) => { const p = pct(v.got, v.max); return `<div class="meter"><span>${esc(k)}</span><div class="bar"><i class="${cls(p)}" style="width:${p}%"></i></div><b class="${cls(p)}">${p}٪</b></div>`; }).join('')}
+      ${sk.length && pct(sk[0][1].got, sk[0][1].max) < 75 ? `<p class="hint">${ic('alert')} أضعف فرع: ${esc(sk[0][0])}؛ يستحق مراجعة للفصل كله.</p>` : ''}</div>
+    <div class="card ${weak.length ? 'alert' : ''}"><h3>${ic('alert')} المتعثرون (أقل من ${pass}٪): ${weak.length}</h3>
+      ${weak.length ? `${weak.map((x) => `<button type="button" class="star-row" data-act="stu-profile" data-id="${x.s.id}">${avatar(x.s)}<span class="grow"><b>${esc(shortName(x.s))}</b><small>${x.skills.map(([k, p]) => `${esc(k)} ${p}٪`).join('، ')}</small></span><span class="pts bad">${pct(x.g.got, x.g.max)}٪</span></button>`).join('')}
+      <div class="btns"><button type="button" class="primary sm" data-act="plan-open">${ic('file')} الخطة العلاجية</button><button type="button" class="ghost sm" data-act="q-start" data-tpl="grades" data-sids="${weak.map((x) => x.s.id).join(',')}" data-period="month">${ic('chat')} أرسل درجاتهم لأوليائهم</button></div>` : `<p class="calm">${ic('check')} لا متعثرين في هذا الفصل. ما شاء الله.</p>`}</div>
+    <div class="card"><h3>${ic('users')} كل الطلاب</h3>
       <table class="tbl"><thead><tr><th>الطالب</th><th>المجموع</th><th>النسبة</th></tr></thead><tbody>
-      ${list.map(({ s, g }) => `<tr><td>${esc(shortName(s))}</td><td>${g.max ? `${round1(g.got)} من ${g.max}` : '—'}</td><td class="${g.max ? cls(pct(g.got, g.max)) : ''}">${g.max ? `${pct(g.got, g.max)}٪` : '—'}</td></tr>`).join('')}</tbody></table>
-      <div class="btns"><button type="button" class="ghost" data-act="q-start" data-tpl="grades" data-sids="${list.filter((x) => x.g.max).map((x) => x.s.id).join(',')}" data-period="month">💬 أرسل الدرجات لكل الأولياء</button><button type="button" class="ghost" data-act="gr-xlsx">📄 كشف الدرجات والخطة (إكسل)</button></div></div>`;
+      ${list.map(({ s, g }) => `<tr data-act="stu-profile" data-id="${s.id}"><td>${esc(shortName(s))}</td><td>${g.max ? `${round1(g.got)} من ${g.max}` : '—'}</td><td class="${g.max ? cls(pct(g.got, g.max)) : ''}">${g.max ? `${pct(g.got, g.max)}٪` : '—'}</td></tr>`).join('')}</tbody></table>
+      <div class="btns"><button type="button" class="ghost sm" data-act="q-start" data-tpl="grades" data-sids="${list.filter((x) => x.g.max).map((x) => x.s.id).join(',')}" data-period="month">${ic('chat')} أرسل الدرجات لكل الأولياء</button><button type="button" class="ghost sm" data-act="gr-xlsx">${ic('file')} كشف الدرجات (إكسل)</button></div></div>`;
 }
 
 // what a struggling student needs in each weak branch: the same ready steps a remedial plan asks for
@@ -144,9 +151,9 @@ function planRows(c) {
 Acts['plan-open'] = () => {
   const c = curCls();
   const rows = planRows(c);
-  const text = `الخطة العلاجية لمادة ${T.settings.subject}، فصل ${clsOf(c).name}\nالتاريخ: ${dateLabel(today())}\n\n${rows.map((r, i) => `${i + 1}) ${r.name}: النسبة ${r.total}٪\nمواطن الضعف: ${r.skills}`).join('\n\n')}\n\nالإجراءات العلاجية:\n${PLAN_STEPS.map((p) => `- ${p}`).join('\n')}${T.settings.teacher ? `\n\n${T.settings.teacher}` : ''}`;
+  const text = `الخطة العلاجية لمادة ${T.settings.subject}، فصل ${clsOf(c).name}\nالتاريخ: ${dateLabel(today())}\n\n${rows.map((r, i) => `(${i + 1}) ${r.name}: النسبة ${r.total}٪\nمواطن الضعف: ${r.skills}`).join('\n\n')}\n\nالإجراءات العلاجية:\n${PLAN_STEPS.map((p) => `- ${p}`).join('\n')}${T.settings.teacher ? `\n\n${T.settings.teacher}` : ''}`;
   openSheet(`<h3>الخطة العلاجية</h3><pre class="plan">${esc(ar(text))}</pre>
-    <div class="sheet-actions"><button type="button" class="primary" data-act="plan-copy">نسخ</button><button type="button" class="ghost" data-act="gr-xlsx">📄 إكسل</button></div>`);
+    <div class="sheet-actions"><button type="button" class="primary" data-act="plan-copy">نسخ</button><button type="button" class="ghost" data-act="gr-xlsx">${ic('file')} إكسل</button></div>`);
 };
 Acts['plan-copy'] = () => copyText(document.querySelector('pre.plan').textContent);
 

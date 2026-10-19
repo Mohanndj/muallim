@@ -1,7 +1,8 @@
-// Offline support for «مساعد المعلم»: network first, the cache when there is no connection.
-const VERSION = 1;
+// Offline support for «مساعد المعلم»: the app's files network first (the cache when there is no
+// connection), and the fonts from the cache once fetched.
+const VERSION = 2;
 const CACHE = `muallim-v${VERSION}`;
-const ASSETS = ['./', './index.html', './q.html', './style.css', './qcodec.js', './core.js', './students.js', './behavior.js', './messages.js', './grades.js', './quizzes.js',
+const ASSETS = ['./', './index.html', './q.html', './style.css', './qcodec.js', './core.js', './home.js', './students.js', './behavior.js', './messages.js', './grades.js', './quizzes.js', './screen.js',
   './xlsx-read.js', './xlsx.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
@@ -11,15 +12,30 @@ self.addEventListener('activate', (e) => {
 });
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin === self.location.origin) {
+    e.respondWith((async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const res = await fetch(req, { cache: 'no-cache' });
+        if (res && res.ok) cache.put(req, res.clone());
+        return res;
+      } catch {
+        return (await cache.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' ? (await cache.match('./index.html')) || Response.error() : Response.error());
+      }
+    })());
+    return;
+  }
+  if (!/^https:\/\/fonts\.(googleapis|gstatic)\.com$/.test(url.origin)) return;
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
+    const hit = await cache.match(req);
+    if (hit) return hit;
     try {
-      const res = await fetch(req, { cache: 'no-cache' });
-      if (res && res.ok) cache.put(req, res.clone());
+      const res = await fetch(req);
+      if (res && (res.ok || res.type === 'opaque')) cache.put(req, res.clone());
       return res;
-    } catch {
-      return (await cache.match(req, { ignoreSearch: true })) || (req.mode === 'navigate' ? (await cache.match('./index.html')) || Response.error() : Response.error());
-    }
+    } catch { return Response.error(); }
   })());
 });

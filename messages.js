@@ -8,9 +8,9 @@ const VARS = [
   ['الطالب', 'اسم الطالب كاملاً'], ['الاسم', 'اسمه الأول'], ['ولي_الأمر', 'اسم ولي الأمر (أو «ولي أمر الطالب …»)'], ['الفصل', 'فصله'],
   ['المادة', 'المادة'], ['المعلم', 'اسمك'], ['المدرسة', 'المدرسة'], ['التاريخ', 'تاريخ اليوم'], ['الفترة', '«هذا الأسبوع» أو «هذا الشهر»'],
   ['ملخص_السلوك', 'ملخص ملاحظاته الإيجابية والسلبية في الفترة'], ['الإيجابيات', 'ملاحظاته الإيجابية'], ['السلبيات', 'ملاحظاته السلبية'],
-  ['الدرجات', 'كل درجاته، كل تقويم في سطر'], ['المجموع', 'مجموع درجاته ونسبتها'], ['نص', 'نص تكتبه عند الإرسال'],
+  ['المستوى', 'مستواه ونقاطه'], ['الدرجات', 'كل درجاته، كل تقويم في سطر'], ['المجموع', 'مجموع درجاته ونسبتها'], ['نص', 'نص تكتبه عند الإرسال'],
 ];
-const PERIODS = { week: ['هذا الأسبوع', weekStart], month: ['هذا الشهر', monthStart], all: ['الفصل الدراسي', () => '0000-00-00'] };
+const PERIODS = { week: ['هذا الأسبوع', weekStart], month: ['هذا الشهر', monthStart], all: ['الفصل الدراسي', () => EVER] };
 
 // "مشاركة متميزة (٣ مرات)" per reason
 function reasonsList(list) {
@@ -25,16 +25,19 @@ function fill(text, s, opts = {}) {
   const summary = !list.length ? `لم تُسجَّل عليه ملاحظات ${per[0]}، وهو منضبط ولله الحمد.`
     : [pos.length ? `ملاحظات إيجابية (${pos.length}):\n${reasonsList(pos)}` : '', neg.length ? `ملاحظات تحتاج متابعتكم (${neg.length}):\n${reasonsList(neg)}` : 'لا ملاحظات سلبية عليه ولله الحمد.'].filter(Boolean).join('\n');
   const g = gradesOf(s);
+  const n = points(s.id), lv = levelOf(n);
   const map = {
     'الطالب': s.name, 'الاسم': firstName(s), 'ولي_الأمر': s.parent || `ولي أمر الطالب ${s.name}`, 'الفصل': clsOf(s.cls) ? clsOf(s.cls).name : '',
     'المادة': T.settings.subject, 'المعلم': T.settings.teacher ? T.settings.teacher : 'معلم المادة', 'المدرسة': T.settings.school, 'التاريخ': dateLabel(today()), 'الفترة': per[0],
     'ملخص_السلوك': summary, 'الإيجابيات': pos.length ? reasonsList(pos) : 'مشاركته وانضباطه في الحصة', 'السلبيات': neg.length ? reasonsList(neg) : 'لا ملاحظات',
+    'المستوى': lv.tier ? `مستوى «${lv.name}» بـ${n} نقطة تميّز` : `${n} نقطة تميّز`,
     'الدرجات': g.lines.length ? g.lines.join('\n') : 'لم تُرصد درجات بعد', 'المجموع': g.max ? `${round1(g.got)} من ${g.max} (${pct(g.got, g.max)}٪)` : 'لم تُرصد درجات بعد', 'نص': opts.text || '',
   };
   return ar(text.replace(/\{([^{}]+)\}/g, (all, k) => (k.trim() in map ? map[k.trim()] : all)).replace(/\n{3,}/g, '\n\n').trim());
 }
 
 let msgUi = { tpl: 'weekly', period: 'week', who: 'all', text: '', sel: new Set() };
+const WHO = [['all', 'كل أولياء الفصل'], ['neg', 'من عليهم ملاحظات'], ['pos', 'المتميزون'], ['weak', 'المتعثرون'], ['pick', 'أختارهم']];
 // the smart groups: who a message goes to, worked out from what was recorded
 function recipients(cid, who) {
   const list = studentsIn(cid);
@@ -47,34 +50,38 @@ function recipients(cid, who) {
 }
 
 Views.messages = () => {
-  if (T.queue && T.queue.list.some((m) => !m.done && !m.skip)) return queueView();
-  if (!T.classes.length) return `<h2>الرسائل</h2>${noClasses()}`;
+  if (T.queue) return queueView(); // until «انتهيت»: the teacher sees the last one went
+  const head = pageHead('الرسائل', 'رسالة لكل ولي أمر باسم ابنه، تُكتب وحدها وترسلها من واتساب');
+  if (!T.classes.length) return `${head}${noClasses()}`;
   const c = curCls();
   const tpl = T.tpls.find((t) => t.id === msgUi.tpl) || T.tpls[0];
   const to = recipients(c, msgUi.who);
+  const ready = to.filter((s) => phoneOk(s.phone));
   const sample = to[0] || studentsIn(c)[0];
-  const opt = (v, n, cur) => `<option value="${v}"${v === cur ? ' selected' : ''}>${n}</option>`;
-  return `<h2>الرسائل</h2>
-    ${classChips()}
-    <div class="card">
-      <label>الرسالة<select data-change="msg-tpl">${T.tpls.map((t) => opt(t.id, esc(t.name), tpl && tpl.id)).join('')}</select></label>
-      <div class="btns"><button type="button" class="ghost sm" data-act="tpl-edit" data-id="${tpl ? tpl.id : ''}">✎ عدّل نصها</button><button type="button" class="ghost sm" data-act="tpl-new">＋ رسالة جديدة</button></div>
-      ${tpl && /\{نص\}/.test(tpl.text) ? `<label>النص الذي تريد إبلاغه<textarea data-input="msg-text" rows="3" placeholder="مثل: الاختبار القصير يوم الثلاثاء في درس …">${esc(msgUi.text)}</textarea></label>` : ''}
-      <label>الملاحظات والفترة<select data-change="msg-period">${opt('week', 'هذا الأسبوع', msgUi.period)}${opt('month', 'هذا الشهر', msgUi.period)}${opt('all', 'الفصل الدراسي كله', msgUi.period)}</select></label>
-      <label>إلى<select data-change="msg-who">${opt('all', 'كل أولياء أمور الفصل', msgUi.who)}${opt('neg', 'من عليهم ملاحظات سلبية', msgUi.who)}${opt('pos', 'المتميزين (إيجابية بلا سلبية)', msgUi.who)}${opt('weak', `المتعثرين في الدرجات (أقل من ${T.settings.pass}٪)`, msgUi.who)}${opt('pick', 'طلاب أختارهم', msgUi.who)}</select></label>
-      ${msgUi.who === 'pick' ? `<div class="chips wrap">${studentsIn(c).map((s) => `<button type="button" class="chip${msgUi.sel.has(s.id) ? ' on' : ''}" data-act="msg-pick" data-id="${s.id}">${esc(shortName(s))}</button>`).join('')}</div>` : ''}
-      <div class="facts"><span>الرسائل: ${to.length}</span>${to.filter((s) => !phoneOk(s.phone)).length ? `<span class="warn">بلا رقم (لن تُرسل): ${to.filter((s) => !phoneOk(s.phone)).length}</span>` : ''}</div>
-      ${sample && tpl ? `<h4>مثال: رسالة ولي أمر ${esc(shortName(sample))}</h4><div class="bubble">${esc(fill(tpl.text, sample, { period: msgUi.period, text: msgUi.text }))}</div>` : ''}
-      <button type="button" class="primary big" data-act="q-start" data-tpl="${tpl ? tpl.id : ''}" data-sids="${to.map((s) => s.id).join(',')}" data-period="${msgUi.period}"${to.some((s) => phoneOk(s.phone)) ? '' : ' disabled'}>💬 جهّز ${ar(to.filter((s) => phoneOk(s.phone)).length)} رسالة واتساب</button>
-    </div>
-    <div class="card"><h3>رسالة واحدة لمجموعة واتساب</h3><p class="explain">رسالة عامة بلا أسماء (إعلان أو تذكير) تُرسل إلى مجموعة أولياء الأمور: تختار المجموعة في واتساب بعد الضغط.</p>
+  const usesBeh = tpl && /\{(ملخص_السلوك|الإيجابيات|السلبيات|الفترة)\}/.test(tpl.text);
+  return `${head}${classChips()}
+    <div class="card step"><h3><span class="sn">١</span> اختر الرسالة</h3>
+      <div class="chips wrap">${T.tpls.map((t) => `<button type="button" class="chip${t.id === (tpl && tpl.id) ? ' on' : ''}" data-act="msg-tpl" data-id="${t.id}">${esc(t.name)}</button>`).join('')}
+        <button type="button" class="chip add" data-act="tpl-new">${ic('plus')} رسالة جديدة</button></div>
+      ${tpl && /\{نص\}/.test(tpl.text) ? `<label>ما الذي تريد إبلاغه؟<textarea data-input="msg-text" rows="3" placeholder="مثل: الاختبار القصير يوم الثلاثاء في درس أركان الإيمان">${esc(msgUi.text)}</textarea></label>` : ''}
+      ${usesBeh ? `<p class="mini-h">الملاحظات من:</p><div class="seg sm">${Object.entries(PERIODS).map(([k, [n]]) => `<button type="button" class="${k === msgUi.period ? 'on' : ''}" data-act="msg-period" data-v="${k}">${n}</button>`).join('')}</div>` : ''}
+      <button type="button" class="link sm" data-act="tpl-edit" data-id="${tpl ? tpl.id : ''}">${ic('edit')} عدّل نص هذه الرسالة</button></div>
+    <div class="card step"><h3><span class="sn">٢</span> لمن؟</h3>
+      <div class="chips wrap">${WHO.map(([k, n]) => `<button type="button" class="chip${k === msgUi.who ? ' on' : ''}" data-act="msg-who" data-v="${k}">${n}</button>`).join('')}</div>
+      ${msgUi.who === 'pick' ? `<div class="chips wrap picks">${studentsIn(c).map((s) => `<button type="button" class="chip${msgUi.sel.has(s.id) ? ' on' : ''}" data-act="msg-pick" data-id="${s.id}">${esc(shortName(s))}</button>`).join('')}</div>` : ''}
+      <div class="facts"><span>${plural(to.length, 'ولي أمر واحد', 'وليّا أمر', 'أولياء أمور', 'ولي أمر')}</span>${to.length - ready.length ? `<span class="warn">بلا رقم (لن تصلهم): ${to.length - ready.length}</span>` : ''}</div></div>
+    <div class="card step"><h3><span class="sn">٣</span> راجع وأرسل</h3>
+      ${sample && tpl ? `<p class="mini-h">هكذا تصل رسالة ولي أمر ${esc(shortName(sample))}:</p><div class="bubble">${esc(fill(tpl.text, sample, { period: msgUi.period, text: msgUi.text }))}</div>` : '<p class="muted">اختر من ترسل إليهم.</p>'}
+      <button type="button" class="wa big" data-act="q-start" data-tpl="${tpl ? tpl.id : ''}" data-sids="${to.map((s) => s.id).join(',')}" data-period="${msgUi.period}"${ready.length ? '' : ' disabled'}>${ic('send')} جهّز ${plural(ready.length, 'رسالة واحدة', 'رسالتين', 'رسائل', 'رسالة')} للإرسال</button>
+      <p class="hint center">لكل ولي أمر ضغطتان: «أرسل» في التطبيق، ثم زر الإرسال في واتساب.</p></div>
+    <details class="card"><summary>${ic('users')} رسالة عامة لمجموعة واتساب</summary><p class="hint">إعلان أو تذكير بلا أسماء، تختار المجموعة في واتساب بعد الضغط.</p>
       <textarea id="grpText" rows="3" placeholder="مثل: نذكّركم بالاختبار القصير يوم الثلاثاء…"></textarea>
-      <button type="button" class="ghost" data-act="grp-send">💬 أرسلها إلى مجموعة</button></div>
+      <button type="button" class="ghost" data-act="grp-send">${ic('send')} أرسلها إلى مجموعة</button></details>
     ${sentLog()}`;
 };
-Changes['msg-tpl'] = (el) => { msgUi.tpl = el.value; render(); };
-Changes['msg-period'] = (el) => { msgUi.period = el.value; render(); };
-Changes['msg-who'] = (el) => { msgUi.who = el.value; render(); };
+Acts['msg-tpl'] = (el) => { msgUi.tpl = el.dataset.id; render(); };
+Acts['msg-period'] = (el) => { msgUi.period = el.dataset.v; render(); };
+Acts['msg-who'] = (el) => { msgUi.who = el.dataset.v; render(); };
 let msgTextTimer;
 Inputs['msg-text'] = (el) => {
   msgUi.text = el.value;
@@ -97,7 +104,7 @@ Acts['grp-send'] = () => {
 function sentLog() {
   const recent = T.sent.slice().sort((a, b) => b.at - a.at).slice(0, 8);
   if (!recent.length) return '';
-  return `<div class="card"><h3>آخر ما أرسلت</h3>${recent.map((x) => { const s = stuOf(x.sid); return `<div class="hrow msg"><span>${esc(x.name)}: ${esc(s ? shortName(s) : '')}</span><small>${dateLabel(iso(new Date(x.at)))}</small></div>`; }).join('')}</div>`;
+  return `<div class="card"><h3>${ic('check')} آخر ما أرسلت</h3>${recent.map((x) => { const s = stuOf(x.sid); return `<div class="hrow msg"><span>${esc(x.name)}: ${esc(s ? shortName(s) : '')}</span><small>${dateLabel(iso(new Date(x.at)))}</small></div>`; }).join('')}</div>`;
 }
 
 // ---- templates ----
@@ -107,7 +114,7 @@ function tplForm(t) {
     <label>نصها<textarea name="text" id="tplText" rows="9" required>${esc(t ? t.text : 'السلام عليكم ورحمة الله وبركاته\nولي أمر الطالب {الطالب} حفظه الله\n\n{المعلم}')}</textarea></label>
     <p class="hint">اضغط خانة لتضاف إلى النص، وتُستبدل عند الإرسال ببيانات كل طالب:</p>
     <div class="chips wrap">${VARS.map(([k, d]) => `<button type="button" class="chip var" data-act="tpl-var" data-v="${k}" title="${esc(d)}">{${k}}</button>`).join('')}</div>
-    <div class="sheet-actions"><button class="primary">احفظ</button>${t ? `<button type="button" class="danger" data-act="tpl-del" data-id="${t.id}">احذفها</button>` : '<button type="button" class="ghost" data-act="close-sheet">إلغاء</button>'}</div></form>`;
+    <div class="sheet-actions"><button class="primary">احفظ</button>${t ? `<button type="button" class="danger" data-act="tpl-del" data-id="${t.id}">${ic('trash')} احذفها</button>` : '<button type="button" class="ghost" data-act="close-sheet">إلغاء</button>'}</div></form>`;
 }
 Acts['tpl-new'] = () => openSheet(tplForm(null));
 Acts['tpl-edit'] = (el) => openSheet(tplForm(T.tpls.find((t) => t.id === el.dataset.id)));
@@ -138,7 +145,7 @@ Acts['tpl-del'] = (el) => {
 Acts['q-start'] = (el) => {
   const ids = el.dataset.sids.split(',').filter(Boolean);
   let tplId = el.dataset.tpl;
-  if (!tplId) { // a single student from the behaviour sheet: the behaviour report
+  if (!tplId) { // a single student from his sheet: the behaviour report
     tplId = 'weekly';
     if (!T.tpls.some((t) => t.id === tplId)) tplId = T.tpls[0].id;
   }
@@ -148,6 +155,7 @@ Acts['q-start'] = (el) => {
   const list = ids.map(stuOf).filter(Boolean).map((s) => ({ sid: s.id, text: fill(tpl.text, s, { period: el.dataset.period || 'week', text: msgUi.text }), done: false, skip: !phoneOk(s.phone) }));
   T.queue = { tpl: tpl.id, name: tpl.name, at: Date.now(), list, cur: -1 };
   save(); closeSheet();
+  if (typeof closeStage === 'function') closeStage();
   go('messages');
 };
 function queueView() {
@@ -157,23 +165,23 @@ function queueView() {
   const next = q.list.findIndex((m) => !m.done && !m.skip);
   const ns = next >= 0 ? stuOf(q.list[next].sid) : null;
   const noPhone = q.list.filter((m) => m.skip && !phoneOk((stuOf(m.sid) || {}).phone));
-  return `<h2>إرسال «${esc(q.name)}»</h2>
-    <div class="card"><div class="facts"><span class="good">أُرسلت: ${done} من ${ready.length}</span>${noPhone.length ? `<span class="warn">بلا رقم: ${noPhone.length}</span>` : ''}</div>
+  const cur = q.cur >= 0 && q.list[q.cur] && !q.list[q.cur].done ? stuOf(q.list[q.cur].sid) : null;
+  return `${pageHead(`إرسال «${esc(q.name)}»`, 'أرسل، ثم ارجع هنا تجد التالي جاهزاً')}
+    <div class="card send-card"><div class="row-between"><b class="big-n">${bigNum(done)} <small>من ${ready.length}</small></b>${noPhone.length ? `<span class="tag warn">بلا رقم: ${noPhone.length}</span>` : ''}</div>
       <div class="bar"><i style="width:${pct(done, ready.length)}%"></i></div>
-      ${q.cur >= 0 && q.list[q.cur] && !q.list[q.cur].done ? `<button type="button" class="ghost big" data-act="q-ok">✓ أرسلتها إلى ولي أمر ${esc(shortName(stuOf(q.list[q.cur].sid) || { name: '' }))}</button>` : ''}
-      ${ns ? `<button type="button" class="primary big wa" data-act="q-send" data-i="${next}">💬 أرسل إلى ولي أمر ${esc(shortName(ns))}</button>
-      <p class="hint">يفتح واتساب والرسالة مكتوبة؛ اضغط إرسال ثم ارجع هنا، وتجد التالي جاهزاً.</p>` : ''}
+      ${cur ? `<button type="button" class="ghost big" data-act="q-ok">${ic('check')} أرسلتها إلى ولي أمر ${esc(shortName(cur))}</button>` : ''}
+      ${ns ? `<button type="button" class="wa big" data-act="q-send" data-i="${next}">${ic('send')} أرسل إلى ولي أمر ${esc(shortName(ns))}</button>` : `<p class="calm">${ic('check')} انتهت الرسائل كلها. جزاك الله خيراً.</p>`}
       <div class="btns"><button type="button" class="ghost sm" data-act="q-end">${next >= 0 ? 'أوقف الإرسال' : 'انتهيت'}</button></div></div>
     <ul class="list q">${q.list.map((m, i) => { const s = stuOf(m.sid); if (!s) return ''; return `<li class="${m.done ? 'done' : m.skip ? 'skip' : i === next ? 'cur' : ''}">
-      <details><summary><span class="grow">${m.done ? '✓ ' : ''}${esc(s.name)}</span>${m.skip ? `<span class="tag warn">${phoneOk(s.phone) ? 'تخطيتها' : 'بلا رقم'}</span>` : ''}</summary><div class="bubble">${esc(m.text)}</div>
-      <div class="btns">${phoneOk(s.phone) ? `<button type="button" class="ghost sm" data-act="q-send" data-i="${i}">💬 ${m.done ? 'أرسلها مرة أخرى' : 'أرسلها'}</button>` : ''}${!m.done && !m.skip ? `<button type="button" class="ghost sm" data-act="q-skip" data-i="${i}">تخطَّها</button>` : ''}<button type="button" class="ghost sm" data-act="q-copy" data-i="${i}">انسخها</button></div></details></li>`; }).join('')}</ul>`;
+      <details><summary><span class="tick">${m.done ? ic('check') : ''}</span><span class="grow">${esc(s.name)}</span>${m.skip ? `<span class="tag warn">${phoneOk(s.phone) ? 'تخطيتها' : 'بلا رقم'}</span>` : ''}</summary><div class="bubble">${esc(m.text)}</div>
+      <div class="btns">${phoneOk(s.phone) ? `<button type="button" class="ghost sm" data-act="q-send" data-i="${i}">${ic('send')} ${m.done ? 'أرسلها مرة أخرى' : 'أرسلها'}</button>` : ''}${!m.done && !m.skip ? `<button type="button" class="ghost sm" data-act="q-skip" data-i="${i}">تخطَّها</button>` : ''}<button type="button" class="ghost sm" data-act="q-copy" data-i="${i}">انسخها</button></div></details></li>`; }).join('')}</ul>`;
 }
 Acts['q-send'] = (el) => {
   const q = T.queue, i = Number(el.dataset.i), m = q.list[i], s = stuOf(m.sid);
   if (!s || !phoneOk(s.phone)) return;
   window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(m.text)}`, '_blank');
   // there is no way to know that the message was really sent: back in the app, it counts as sent
-  // (and «✓ أرسلتها» says so by hand if the app never left the screen)
+  // (and «أرسلتها» says so by hand if the app never left the screen)
   q.cur = i;
   qPending = true;
   save(); render();
