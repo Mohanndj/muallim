@@ -1,139 +1,150 @@
 'use strict';
-// الصفحات: فصولي ← الفصل (قائمة طلابه) ← الطالب (أيقونات التقييم). والتحضير اليومي بضغطة.
+// الصفحات: الفصول ← الفصل بأقسامه الأربعة (المتابعة، حاضر، أعمال السنة، الأدوات الخاصة).
 
-// ---- فصولي ----
+const searchBar = (ph = 'بحث') => `<label class="search">${ic('search')}<input id="q" data-input="q" value="${esc(UI.q)}" placeholder="${ph}" autocomplete="off"></label>`;
+Inputs.q = (el) => { UI.q = el.value; render(); };
+const match = (s) => !UI.q.trim() || s.name.includes(UI.q.trim());
+
+// ---- الفصول ----
 Views.home = () => {
-  const s = T.settings;
-  const head = `<header class="bar"><div class="bar-t"><h1>فصولي</h1><small>${dateLabel(today())} | ${hijri()}</small></div>
-    <button type="button" class="icon-btn" data-act="go" data-h="#settings" aria-label="الإعدادات">${ic('gear')}</button></header>`;
-  if (!T.classes.length) {
-    return `${head}<div class="empty">${ic('users', 'big')}<h2>أهلاً${s.teacher ? ` ${esc(s.teacher)}` : ''}</h2><p>أضف فصلك، ثم طلابه من ملف إكسل (كشف نور يصلح) أو بلصق أسمائهم.</p>
-      <button type="button" class="primary big" data-act="cls-new">${ic('plus')} أضف فصلاً</button></div>`;
+  const list = T.classes.filter((c) => !UI.q.trim() || c.name.includes(UI.q.trim()));
+  return `<header class="home-h"><div><h1>الفصول</h1><p>إدارة الفصول ومتابعة مستواهم</p></div>
+      <div class="round-btns"><button type="button" class="round" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div></header>
+    ${searchBar()}
+    <div class="cls-grid">${list.map((c) => {
+      const lv = classLevel(c.id);
+      const C = 2 * Math.PI * 16;
+      return `<div class="cls-card" data-act="go" data-h="#c/${c.id}/follow">
+        <button type="button" class="dots-btn" data-act="cls-more" data-id="${c.id}" aria-label="خيارات">${ic('more')}</button>
+        <b class="cls-name">${esc(c.name)}</b>
+        <div class="cls-lv"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="r-bg"/><circle cx="20" cy="20" r="16" class="r-fg" style="stroke-dasharray:${C};stroke-dashoffset:${C * (1 - lv / 100)}"/><text x="20" y="24">${lv}%</text></svg><span>| مستوى الفصل</span></div>
+        <span class="cls-n">${ic('users')} ${studentsIn(c.id).length} طالب</span></div>`;
+    }).join('')}<button type="button" class="cls-add" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div>`;
+};
+
+// ---- رأس صفحة الفصل ----
+function classHead(extra = '') {
+  return `<header class="cls-h"><button type="button" class="round" data-act="back" aria-label="رجوع">${ic('back')}</button><h1>${esc(clsOf(UI.cls).name)}</h1>
+    <div class="round-btns">${extra}</div></header>`;
+}
+const filters = (withDate) => `<div class="filters">${searchBar()}<div class="fbox"><small>المادة</small><span>${esc(T.settings.subject)}</span></div>
+  ${withDate ? `<label class="fbox"><small>التاريخ</small><input type="date" id="attDate" value="${UI.date}" max="${today()}"></label>` : ''}</div>`;
+
+Views.class = () => ({ follow: viewFollow, att: viewAtt, yw: viewYW, tools: viewTools }[UI.tab] || viewFollow)();
+
+// ---- المتابعة: بطاقة لكل طالب بأيقونات تقييمه ----
+const stuPage = {};
+function viewFollow() {
+  const list = studentsIn(UI.cls);
+  if (!list.length) {
+    return `${classHead(`<button type="button" class="round" data-act="cls-more" data-id="${UI.cls}" aria-label="خيارات">${ic('more')}</button>`)}
+      <div class="empty">${AVATAR}<h2>لا طلاب في هذا الفصل</h2><p>أضفهم من ملف إكسل (كشف نور) أو بلصق أسمائهم.</p><button type="button" class="blue-btn" data-act="imp-open">${ic('plus')} أضف الطلاب</button></div>`;
   }
-  return `${head}<div class="cls-list">${T.classes.map((c) => {
-    const n = studentsIn(c.id).length;
-    const day = dayAtt(c.id);
-    const abs = day ? Object.values(day).filter((v) => v === 'a').length : 0;
-    return `<button type="button" class="cls-card" data-act="go" data-h="#c/${c.id}">
-      <span class="cls-ic">${ic('users')}</span><span class="grow"><b>${esc(c.name)}</b><small>${plural(n, 'طالب واحد', 'طالبان', 'طلاب', 'طالباً')}</small></span>
-      ${day ? `<span class="pill ok">${ic('check')} حُضِّر${abs ? ` | غاب ${abs}` : ''}</span>` : '<span class="pill">لم يُحضَّر اليوم</span>'}${ic('next', 'chev')}</button>`;
-  }).join('')}</div>
-    <button type="button" class="fab" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button>`;
-};
+  return `${classHead(`<button type="button" class="round" data-act="cls-more" data-id="${UI.cls}" aria-label="خيارات">${ic('more')}</button>`)}
+    ${searchBar()}
+    <div class="cards">${list.filter(match).map((s) => {
+      // كل أيقونة استُعملت مع الطالب مرة واحدة بعدّادها، بترتيب أول استعمال؛ وعشر خانات في الصفحة
+      const used = [];
+      for (const b of behOf(s.id).sort((x, y) => x.at - y.at)) { const u = used.find((x) => x.k === b.icon && x.name === b.reason); if (u) u.n++; else used.push({ k: b.icon, name: b.reason, n: 1 }); }
+      const pages = Math.max(2, Math.ceil(used.length / 10));
+      const pg = Math.min(stuPage[s.id] || 0, pages - 1);
+      const slots = Array.from({ length: 10 }, (_, i) => used[pg * 10 + i]);
+      return `<div class="scard" data-act="eval-open" data-id="${s.id}">
+        <div class="sc-av">${AVATAR}</div>
+        <div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}</b><span class="sc-x"><span class="pill-blue">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
+          <div class="slots">${slots.map((u) => { if (!u) return '<i class="slot"></i>'; const e = evalOf(u.k); return `<i class="slot on" style="--c:${e ? e.c : '#9aa3ad'}" title="${esc(u.name)}">${ic(e ? e.g : 'check')}${u.n > 1 ? `<b>${u.n}</b>` : ''}</i>`; }).join('')}</div>
+          <div class="pager">${Array.from({ length: pages }, (_, i) => `<button type="button" class="${i === pg ? 'on' : ''}" data-act="stu-page" data-id="${s.id}" data-p="${i}" aria-label="صفحة ${i + 1}"></button>`).join('')}</div></div></div>`;
+    }).join('')}</div>`;
+}
+Acts['stu-page'] = (el) => { stuPage[el.dataset.id] = Number(el.dataset.p); render(); };
 
-// ---- الفصل ----
-const sortStudents = (list) => {
-  const by = T.settings.sort;
-  const score = (s) => behOf(s.id).reduce((n, b) => n + (b.kind === 'pos' ? 1 : -1), 0);
-  return list.slice().sort((a, b) => (by === 'stars' ? score(b) - score(a) : 0) || a.name.localeCompare(b.name, 'ar'));
-};
-Views.class = () => {
-  const c = clsOf(UI.cls);
-  const all = studentsIn(c.id);
-  const list = sortStudents(all);
-  const day = dayAtt(c.id);
-  const t = today();
-  const abs = day ? all.filter((s) => day[s.id] === 'a').length : 0;
-  const late = day ? all.filter((s) => day[s.id] === 'l').length : 0;
-  return `<header class="bar"><button type="button" class="icon-btn" data-act="back" aria-label="رجوع">${ic('back')}</button>
-      <div class="bar-t"><h1>${esc(c.name)}</h1><small>${plural(all.length, 'طالب واحد', 'طالبان', 'طلاب', 'طالباً')}</small></div>
-      <button type="button" class="icon-btn" data-act="cls-more" aria-label="المزيد">${ic('more')}</button></header>
-    <nav class="tools">
-      <button type="button" data-act="att-open">${ic('att')}<span>التحضير</span></button>
-      <button type="button" data-act="rand-open">${ic('dice')}<span>عشوائي</span></button>
-      <button type="button" data-act="grp-open">${ic('groups')}<span>مجموعات</span></button>
-      <button type="button" data-act="imp-open">${ic('plus')}<span>إضافة</span></button>
-    </nav>
-    ${all.length ? `<button type="button" class="att-strip${day ? ' done' : ''}" data-act="att-open">${day
-      ? `${ic('check')}<span>حُضِّر اليوم: حاضر ${all.length - abs - late}${abs ? ` | غائب ${abs}` : ''}${late ? ` | متأخر ${late}` : ''}</span><small>تعديل</small>`
-      : `${ic('att')}<span>لم تحضّر طلاب اليوم</span><small>حضّرهم</small>`}</button>` : ''}
-    ${all.length ? `<div class="sort"><button type="button" class="${T.settings.sort === 'alpha' ? 'on' : ''}" data-act="sort" data-v="alpha">أبجدي</button><button type="button" class="${T.settings.sort === 'stars' ? 'on' : ''}" data-act="sort" data-v="stars">الأكثر تميّزاً</button></div>
-    <ul class="stu-list">${list.map((s, i) => {
-      const todays = behOf(s.id).filter((b) => b.d === t);
-      const p = todays.filter((b) => b.kind === 'pos').length, n = todays.length - p;
-      const a = day ? day[s.id] : '';
-      return `<li><button type="button" class="stu-row${a === 'a' ? ' absent' : ''}" data-act="stu-open" data-id="${s.id}"><span class="num">${i + 1}</span>${avatar(s)}
-        <span class="grow"><b>${esc(s.name)}</b>${todays.length ? `<span class="today">${todays.slice(-6).map((b) => { const e = evalOf(b.icon); return e ? `<i style="--c:${e.c}">${ic(e.icon)}</i>` : `<i class="${b.kind}">${b.kind === 'pos' ? '+' : '−'}</i>`; }).join('')}</span>` : ''}</span>
-        ${a === 'a' ? '<span class="pill bad">غائب</span>' : a === 'l' ? '<span class="pill warn">متأخر</span>' : ''}
-        ${p ? `<span class="cnt pos">+${p}</span>` : ''}${n ? `<span class="cnt neg">−${n}</span>` : ''}</button></li>`;
-    }).join('')}</ul>`
-    : `<div class="empty">${ic('users', 'big')}<h2>لا طلاب بعد</h2><p>أضفهم من ملف إكسل أو بلصق أسمائهم.</p><button type="button" class="primary big" data-act="imp-open">${ic('plus')} أضف الطلاب</button></div>`}`;
-};
-Acts.sort = (el) => { T.settings.sort = el.dataset.v; save(); render(); };
-
-// ---- الطالب: أيقونات التقييم ----
-let stuId = '';
-Acts['stu-open'] = (el) => { stuId = el.dataset.id; openSheet(stuSheet(), stuSheet); };
-function stuSheet() {
-  const s = stuOf(stuId);
+// ---- نافذة التقييم ----
+let evalSid = '';
+Acts['eval-open'] = (el, e) => { if (e && e.target.closest('.dots, .pager')) return; evalSid = el.dataset.id; openSheet(evalSheet(), evalSheet, 'gray'); };
+function attChips(s) {
+  const v = attOf(s);
+  return `<div class="att-chips">${ATT.map(([k, n, g, c]) => `<button type="button" class="att-chip${v === k ? ' on' : ''}" style="--c:${c}" data-act="eval-att" data-v="${k}"><i>${ic(g)}</i>${n}</button>`).join('')}</div>`;
+}
+function evalSheet() {
+  const s = stuOf(evalSid);
   if (!s) return '';
-  const all = behOf(s.id);
-  const count = (k) => all.filter((b) => b.icon === k).length;
-  const a = attOf(s);
-  const tile = (e) => `<button type="button" class="ev" style="--c:${e.c}" data-act="ev" data-k="${e.k}"><span class="ev-i">${ic(e.icon)}${count(e.k) ? `<b>${count(e.k)}</b>` : ''}</span><span>${e.name}</span></button>`;
-  const pos = all.filter((b) => b.kind === 'pos').length;
-  const recent = all.slice().sort((x, y) => y.at - x.at).slice(0, 12);
-  return `<div class="who">${avatar(s, 'lg')}<div class="grow"><h3>${esc(s.name)}</h3><small>${esc(clsOf(s.cls) ? clsOf(s.cls).name : '')}</small></div></div>
-    <div class="seg att3">${[['p', 'حاضر'], ['l', 'متأخر'], ['a', 'غائب']].map(([v, n]) => `<button type="button" class="${a === v ? `on ${v}` : ''}" data-act="stu-att" data-v="${v}">${n}</button>`).join('')}</div>
-    <h4 class="pos-h">إيجابي</h4><div class="evs">${EVALS.filter((e) => e.kind === 'pos').map(tile).join('')}</div>
-    <h4 class="neg-h">سلبي</h4><div class="evs">${EVALS.filter((e) => e.kind === 'neg').map(tile).join('')}</div>
-    <div class="sums"><span class="good">إيجابي: ${pos}</span><span class="bad">سلبي: ${all.length - pos}</span><span>غياب: ${attCount(s, 'a')}</span><span>تأخر: ${attCount(s, 'l')}</span></div>
-    ${recent.length ? `<h4>آخر التقييمات</h4><ul class="log">${recent.map((b) => { const e = evalOf(b.icon); return `<li><i style="--c:${e ? e.c : b.kind === 'pos' ? '#16a34a' : '#dc2626'}">${ic(e ? e.icon : 'star')}</i><span class="grow">${esc(b.reason)}</span><small>${dateLabel(b.d)}</small><button type="button" class="x" data-act="ev-del" data-id="${b.id}" aria-label="احذف">${ic('x')}</button></li>`; }).join('')}</ul>` : ''}
-    <div class="row2"><button type="button" class="wa" data-act="send-file" data-id="${s.id}"${phoneOk(s.phone) ? '' : ' disabled'}>${ic('send')} أرسل ملفه لولي الأمر</button>
-      <button type="button" class="ghost" data-act="stu-edit" data-id="${s.id}">${ic('edit')} بياناته</button></div>
-    ${phoneOk(s.phone) ? '' : '<p class="hint">أضف جوال ولي أمره من «بياناته» ليصله ملفه.</p>'}`;
+  const counts = {};
+  for (const b of behOf(s.id)) counts[b.icon] = (counts[b.icon] || 0) + 1;
+  return `<div class="ev-head">${AVATAR}<b>${esc(s.name)}</b></div>${attChips(s)}
+    <div class="ev-grid">${T.evals.map((e) => `<button type="button" class="ev-row" data-act="ev" data-k="${e.k}"><i style="--c:${e.c}">${ic(e.g)}${counts[e.k] ? `<b>${counts[e.k]}</b>` : ''}</i><span>${esc(e.name)}</span><em>${fmt1(e.w)}</em></button>`).join('')}</div>`;
 }
 Acts.ev = (el) => {
   const e = evalOf(el.dataset.k);
-  const b = { id: uid(), sid: stuId, d: today(), at: Date.now(), kind: e.kind, icon: e.k, reason: e.name, note: '' };
+  const b = { id: uid(), sid: evalSid, d: today(), at: Date.now(), icon: e.k, reason: e.name, w: e.w };
   T.beh.push(b);
   save(); refresh();
-  const t = $('sheetBody').querySelector(`.ev[data-k="${e.k}"]`);
-  if (t) t.classList.add('pop');
   if (navigator.vibrate) navigator.vibrate(15);
-  toast(`${e.kind === 'pos' ? '+' : '−'} ${e.name}: ${shortName(stuOf(stuId))}`, () => { T.beh = T.beh.filter((x) => x.id !== b.id); save(); refresh(); });
+  toast(`${e.name}: ${shortName(stuOf(evalSid))} (${fmt1(e.w)})`, () => { T.beh = T.beh.filter((x) => x.id !== b.id); save(); refresh(); });
 };
-Acts['ev-del'] = (el) => {
-  if (!armed(el)) return;
-  T.beh = T.beh.filter((x) => x.id !== el.dataset.id);
-  save(); refresh();
-};
-// حالة الطالب اليوم من نافذته: تحضير الفصل اليوم يبدأ إن لم يكن بدأ (والباقون حاضرون)
-Acts['stu-att'] = (el) => {
-  const s = stuOf(stuId);
-  setAtt(s, el.dataset.v);
-  save(); refresh();
-};
-function setAtt(s, v, d = today()) {
-  T.att[s.cls] = T.att[s.cls] || {};
-  const day = (T.att[s.cls][d] = T.att[s.cls][d] || {});
-  if (v === 'p') delete day[s.id]; else day[s.id] = v;
-}
+Acts['eval-att'] = (el) => { setAtt(stuOf(evalSid), el.dataset.v); save(); refresh(); };
 
-// ---- التحضير ----
-Acts['att-open'] = () => {
-  const cid = UI.cls;
-  T.att[cid] = T.att[cid] || {};
-  if (!T.att[cid][today()]) { T.att[cid][today()] = {}; save(); render(); }
-  openSheet(attSheet(), attSheet);
-};
-function attSheet() {
-  const cid = UI.cls;
-  const day = dayAtt(cid) || {};
-  const list = studentsIn(cid).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-  const abs = list.filter((s) => day[s.id] === 'a');
-  const late = list.filter((s) => day[s.id] === 'l').length;
-  return `<h3>${ic('att')} تحضير اليوم</h3><p class="hint">${dateLabel(today())} | ${hijri()}. الكل حاضر؛ اضغط اسم الغائب مرة، والمتأخر مرتين.</p>
-    <div class="sums"><span class="good">حاضر: ${list.length - abs.length - late}</span><span class="bad">غائب: ${abs.length}</span><span class="warn">متأخر: ${late}</span></div>
-    <ul class="att-list">${list.map((s) => { const v = day[s.id] || 'p'; return `<li><button type="button" class="att-row ${v}" data-act="att-cycle" data-id="${s.id}">${avatar(s)}<span class="grow">${esc(s.name)}</span><span class="att-v">${v === 'a' ? 'غائب' : v === 'l' ? 'متأخر' : 'حاضر'}</span></button></li>`; }).join('')}</ul>
-    <div class="row2"><button type="button" class="primary" data-act="close-sheet">${ic('check')} تم</button>
-      ${abs.length ? `<button type="button" class="wa" data-act="abs-notify">${ic('send')} أبلغ أولياء الغائبين (${abs.length})</button>` : ''}</div>
-    <button type="button" class="link" data-act="att-all">الكل حاضر</button>`;
+// ---- حاضر: سبع حالات لكل طالب، والكل حاضر حتى يتغير ----
+function viewAtt() {
+  const all = studentsIn(UI.cls);
+  const d = UI.date;
+  const counts = {};
+  for (const s of all) { const v = attOf(s, d); counts[v] = (counts[v] || 0) + 1; }
+  return `${classHead(`<button type="button" class="round" data-act="att-all" aria-label="الكل حاضر" title="الكل حاضر">${ic('users')}</button><button type="button" class="round" data-act="att-print" aria-label="طباعة" title="طباعة">${ic('print')}</button>`)}
+    ${filters(true)}
+    <div class="att-sum">${ATT.filter(([k]) => counts[k] || k === 'p').map(([k, n, g, c]) => `<div style="--c:${c}"><i>${ic(g)}</i><span>${counts[k] || 0} ${n}</span></div>`).join('')}</div>
+    ${counts.a && d === today() ? `<button type="button" class="wa-bar" data-act="abs-notify">${ic('send')} أبلغ أولياء الغائبين (${counts.a})</button>` : ''}
+    <div class="cards one">${all.filter(match).map((s) => { const v = attOf(s, d); const [, vn, , vc] = attInfo(v); return `<div class="scard att">
+      <div class="sc-av">${AVATAR}</div><div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}</b><span class="st-pill" style="--c:${v === 'p' ? '#66c470' : vc}">${vn}</span></div>
+      <div class="att-btns">${ATT.map(([k, n, g, c]) => `<button type="button" class="${v === k ? 'on' : ''}" style="--c:${c}" data-act="att-set" data-id="${s.id}" data-v="${k}"><i>${ic(g)}</i><span>${n}</span></button>`).join('')}</div></div></div>`; }).join('')}</div>`;
 }
-Acts['att-cycle'] = (el) => {
-  const s = stuOf(el.dataset.id);
-  const v = attOf(s) || 'p';
-  setAtt(s, v === 'p' ? 'a' : v === 'a' ? 'l' : 'p');
-  save(); refresh();
+document.addEventListener('change', (e) => { if (e.target.id === 'attDate' && e.target.value) { UI.date = e.target.value > today() ? today() : e.target.value; render(); } });
+Acts['att-set'] = (el) => { setAtt(stuOf(el.dataset.id), el.dataset.v, UI.date); save(); render(); };
+Acts['att-all'] = () => { if (T.att[UI.cls]) delete T.att[UI.cls][UI.date]; save(); render(); toast('الكل حاضر'); };
+Acts['att-print'] = () => {
+  const list = studentsIn(UI.cls);
+  const w = window.open('', '_blank');
+  if (!w) { toast('اسمح بفتح نافذة جديدة'); return; }
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>تحضير ${esc(clsOf(UI.cls).name)}</title><style>body{font-family:Tahoma,sans-serif;margin:16mm}h1{font-size:18pt;margin:0 0 4mm}table{width:100%;border-collapse:collapse}td,th{border:1px solid #999;padding:2mm 3mm;text-align:right}th{background:#eef2f7}</style></head><body>
+    <h1>كشف حضور ${esc(clsOf(UI.cls).name)}</h1><p>${esc(T.settings.subject)} | ${dateLabel(UI.date)} ${UI.date.slice(0, 4)}</p>
+    <table><tr><th>م</th><th>الطالب</th><th>الحالة</th></tr>${list.map((s, i) => `<tr><td>${i + 1}</td><td>${esc(s.name)}</td><td>${attInfo(attOf(s, UI.date))[1]}</td></tr>`).join('')}</table></body></html>`);
+  w.document.close();
+  setTimeout(() => w.print(), 300);
 };
-Acts['att-all'] = () => { T.att[UI.cls][today()] = {}; save(); refresh(); };
+
+// ---- أعمال السنة: خمسة بنود لكل طالب ----
+function viewYW() {
+  const list = studentsIn(UI.cls);
+  return `${classHead(`<button type="button" class="round" data-act="cls-more" data-id="${UI.cls}" aria-label="خيارات">${ic('more')}</button>`)}
+    ${filters(false)}
+    <div class="cards one">${list.filter(match).map((s) => { const m = T.marksYW[s.id] || {}; const got = T.yw.reduce((n, y) => n + (typeof m[y.k] === 'number' ? m[y.k] : 0), 0); const done = T.yw.some((y) => typeof m[y.k] === 'number'); return `<div class="scard yw">
+      <div class="sc-av">${AVATAR}</div><div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}</b><span class="pill-blue">${done ? fmtScore(got) : fmtScore(scoreOf(s.id))}</span></div>
+      <div class="yw-boxes">${T.yw.map((y) => `<button type="button" class="ywb${typeof m[y.k] === 'number' ? ' set' : ''}" data-act="yw-edit" data-id="${s.id}" data-k="${y.k}"><small>${esc(y.name)}</small><b>${typeof m[y.k] === 'number' ? fmtScore(m[y.k]) : y.max}</b></button>`).join('')}</div></div></div>`; }).join('')}</div>`;
+}
+// رصد سريع: الدرجة ثم «التالي» للبند التالي فالطالب التالي
+let ywAt = null;
+Acts['yw-edit'] = (el) => { ywAt = { sid: el.dataset.id, k: el.dataset.k }; openSheet(ywSheet()); setTimeout(() => $('ywIn') && $('ywIn').focus(), 60); };
+function ywSheet() {
+  const s = stuOf(ywAt.sid), y = T.yw.find((x) => x.k === ywAt.k);
+  const v = (T.marksYW[s.id] || {})[y.k];
+  return `<form data-submit="yw-save"><div class="ev-head small">${AVATAR}<b>${esc(s.name)}</b></div><h3 class="center">${esc(y.name)} <small>(من ${y.max})</small></h3>
+    <input id="ywIn" class="big-in" inputmode="decimal" enterkeyhint="next" value="${typeof v === 'number' ? v : ''}" placeholder="${y.max}">
+    <div class="row2"><button class="blue-btn">${ic('check')} احفظ والتالي</button><button type="button" class="ghost-btn" data-act="yw-clear">امسح الدرجة</button></div></form>`;
+}
+function ywNext() {
+  const list = studentsIn(UI.cls);
+  const ki = T.yw.findIndex((y) => y.k === ywAt.k);
+  if (ki < T.yw.length - 1) { ywAt.k = T.yw[ki + 1].k; return true; }
+  const si = list.findIndex((s) => s.id === ywAt.sid);
+  if (si < list.length - 1) { ywAt = { sid: list[si + 1].id, k: T.yw[0].k }; return true; }
+  return false;
+}
+Acts['yw-save'] = () => {
+  const y = T.yw.find((x) => x.k === ywAt.k);
+  const v = num($('ywIn').value);
+  if (v !== null && (v < 0 || v > y.max)) { toast(`الدرجة من صفر إلى ${y.max}`); return; }
+  T.marksYW[ywAt.sid] = T.marksYW[ywAt.sid] || {};
+  if (v === null) delete T.marksYW[ywAt.sid][y.k]; else T.marksYW[ywAt.sid][y.k] = v;
+  save(); render();
+  if (ywNext()) { $('sheetBody').innerHTML = ywSheet(); $('ywIn').focus(); } else closeSheet();
+};
+Acts['yw-clear'] = () => { if (T.marksYW[ywAt.sid]) delete T.marksYW[ywAt.sid][ywAt.k]; save(); render(); $('sheetBody').innerHTML = ywSheet(); };

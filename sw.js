@@ -1,6 +1,6 @@
 // Offline support for «مساعد المعلم»: the app's files network first (the cache when there is no
 // connection), and the fonts from the cache once fetched.
-const VERSION = 3;
+const VERSION = 4;
 const CACHE = `muallim-v${VERSION}`;
 const ASSETS = ['./', './index.html', './style.css', './core.js', './app.js', './tools.js',
   './xlsx-read.js', './xlsx.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
