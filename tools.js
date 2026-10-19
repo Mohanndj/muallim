@@ -3,16 +3,16 @@
 
 // ---- الأدوات الخاصة ----
 const TOOL_GAMES = [
-  ['minute', 'الدقيقة الواحدة', 'فكر وأجب', 'timer', 'linear-gradient(160deg,#efe6ff,#cdb6f5)', '#7a40e0'],
-  ['peer', 'أسأل زميلك', 'التعلم بالأقران', 'users', 'linear-gradient(160deg,#e4efff,#b6cff5)', '#2f6fe0'],
-  ['pick', 'من يجيب؟', 'اختيار عشوائي', 'hand', 'linear-gradient(160deg,#eff7d9,#d9eaa8)', '#5c8a12'],
+  ['minute', 'الدقيقة الواحدة', 'فكر وأجب', 'stopwatch', 'linear-gradient(160deg,#efe6ff,#cdb6f5)', '#7a40e0'],
+  ['peer', 'أسأل زميلك', 'التعلم بالأقران', 'comments', 'linear-gradient(160deg,#e4efff,#b6cff5)', '#2f6fe0'],
+  ['pick', 'من يجيب؟', 'اختيار عشوائي', 'hand-pointer', 'linear-gradient(160deg,#eff7d9,#d9eaa8)', '#5c8a12'],
 ];
-const TOOL_ACAD = [['notes', 'المفكرة', 'ملاحظات المعلم', 'doc', '#f2a03c']];
+const TOOL_ACAD = [['notes', 'المفكرة', 'ملاحظات المعلم', 'note-sticky', '#f2a03c']];
 const TOOL_MGMT = [
-  ['timer', 'المؤقت', 'إدارة زمن الحصة', 'timer', '#8e5cf0'],
-  ['calm', 'كأس الهدوء', 'ضبط ضجيج الفصل', 'star', '#2f6fe0'],
-  ['groups', 'مجموعات التعلم', 'تعلم تشاركي', 'users', '#7a6cf0'],
-  ['secret', 'الطالب السري', 'مكافأة الانضباط الخفي', 'user', '#111'],
+  ['timer', 'المؤقت', 'إدارة زمن الحصة', 'hourglass-half', '#8e5cf0'],
+  ['calm', 'كأس الهدوء', 'ضبط ضجيج الفصل', 'trophy', '#2f6fe0'],
+  ['groups', 'مجموعات التعلم', 'تعلم تشاركي', 'people-group', '#7a6cf0'],
+  ['secret', 'الطالب السري', 'مكافأة الانضباط الخفي', 'user-secret', '#111'],
 ];
 const toolRow = ([k, n, sub, g, c]) => `<button type="button" class="tool" data-act="tool" data-k="${k}"><i style="--c:${c}">${ic(g)}</i><span><b>${n}</b><small>${sub}</small></span>${ic('next', 'chev')}</button>`;
 function viewTools() {
@@ -75,7 +75,7 @@ function peerSheet() {
   const p = present();
   if (p.length < 2) { toast('يحتاج طالبين حاضرين على الأقل'); return; }
   const a = rand(p), b = rand(p.filter((s) => s !== a));
-  openSheet(`<h3 class="center">أسأل زميلك</h3><div class="pair"><div><small>يسأل</small>${AVATAR}<b>${esc(shortName(a))}</b></div><span>${ic('next')}</span><div><small>يجيب</small>${AVATAR}<b>${esc(shortName(b))}</b></div></div>
+  openSheet(`<h3 class="center">أسأل زميلك</h3><div class="pair"><div><small>يسأل</small>${AVATAR}<b>${esc(shortName(a))}</b></div><span>${ic('comments')}</span><div><small>يجيب</small>${AVATAR}<b>${esc(shortName(b))}</b></div></div>
     <button type="button" class="blue-btn wide" data-act="tool" data-k="peer">زوج آخر</button>`, null, 'wide');
 }
 // من يجيب؟ اختيار عشوائي من الحاضرين بلا تكرار حتى يُختار الجميع
@@ -333,7 +333,7 @@ Views.settings = () => `<header class="home-h"><div><h1>الإعدادات</h1><
   <div class="card"><h3>نسخة احتياطية</h3><p class="hint">بياناتك في هذا الجوال فقط. احفظ نسخة من حين لآخر.</p>
     <div class="row2"><button type="button" class="ghost-btn" data-act="bk-out">${ic('down')} احفظ نسخة</button><label class="ghost-btn file">${ic('up')} استرجع نسخة<input type="file" id="bkIn" accept=".json,application/json" hidden></label></div></div>
   <div class="card"><button type="button" class="red-btn wide" data-act="wipe">امسح كل البيانات</button></div>
-  <p class="ver">مساعد المعلم | الإصدار ${APP_VERSION}</p>`;
+  <p class="ver">مساعد المعلم | الإصدار ${APP_VERSION}<br>الأيقونات: Font Awesome Free (CC BY 4.0)</p>`;
 Acts['set-save'] = (f) => { T.settings.teacher = f.elements.teacher.value.trim(); T.settings.subject = f.elements.subject.value.trim() || 'الدراسات الإسلامية'; save(); render(); toast('حُفظ'); };
 Inputs['eve-name'] = (el) => { const e = evalOf(el.dataset.k); if (el.value.trim()) { e.name = el.value.trim(); save(); } };
 Inputs['eve-w'] = (el) => { const v = num(el.value); if (v !== null) { evalOf(el.dataset.k).w = v; save(); } };

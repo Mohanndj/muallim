@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 4;
+const APP_VERSION = 5;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -20,73 +20,40 @@ const num = (s) => { const t = latin(s).replace(/[٫,]/g, '.').replace(/[^\d.\-]
 const fmt1 = (n) => `${Math.abs(n).toFixed(1)}${n < 0 ? '-' : ''}`;
 const fmtScore = (n) => { const r = Math.round(n * 10) / 10; return `${Number.isInteger(r) ? Math.abs(r) : Math.abs(r).toFixed(1)}${r < 0 ? '-' : ''}`; };
 
-// ---- رسوم الأيقونات (خط أبيض داخل دائرة ملونة) ----
-const G = {
-  plus: 'M12 5v14M5 12h14', check: 'M5 12.5l4.5 4.5L19 7', x: 'M6 6l12 12M18 6 6 18', back: 'M9 6l6 6-6 6', next: 'M15 6l-6 6 6 6',
-  more: 'M5 12h.01M12 12h.01M19 12h.01', search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4-4',
-  home: 'M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19zM9.5 15.5c1.4 1.3 3.6 1.3 5 0',
-  gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
-  follow: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 14l2 2 4-4',
-  hand: 'M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 10.5V4a1.5 1.5 0 0 1 3 0v6.5M14 10.5V5.5a1.5 1.5 0 0 1 3 0V12M17 9.5a1.5 1.5 0 0 1 3 0V15a7 7 0 0 1-7 7h-1.5a6 6 0 0 1-4.8-2.4L3.4 16a1.5 1.5 0 0 1 2.3-1.9L8 16.5',
-  doc: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 12h6M9 15.5h6M9 9h2',
-  tools: 'M4 20l6-6M14 10l6-6M4 4l16 16M7 3l4 4-4 4-4-4zM17 13l4 4-4 4-4-4z',
-  print: 'M6 9V3h12v6M6 18H4a1 1 0 0 1-1-1v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1h-2M6 14h12v7H6z',
-  file: 'M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8zM14 3v5h5M9 13l4 5M13 13l-4 5',
-  edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
-  down: 'M12 4v11M7 10l5 5 5-5M5 20h14', up: 'M12 20V9M7 14l5-5 5 5M5 4h14', send: 'M21 3 10 14M21 3l-7 18-4-7-7-4z',
-  undo: 'M9 14 4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3', bolt: 'M13 2 4 14h7l-1 8 9-12h-7z', book: 'M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z',
-  user: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM4 21a8 8 0 0 1 16 0', users: 'M16 20v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-1a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
-  timer: 'M12 22a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 10v4l2.5 2.5M9 2h6',
-  // التقييم
-  headok: 'M14.5 21v-3h2a2 2 0 0 0 2-2v-2.5l2-.8-2-3.7A7 7 0 1 0 6 15v6M9.5 9.5l1.6 1.6 3-3',
-  headx: 'M14.5 21v-3h2a2 2 0 0 0 2-2v-2.5l2-.8-2-3.7A7 7 0 1 0 6 15v6M10 7.5l3.5 3.5M13.5 7.5 10 11',
-  trophyx: 'M8 21h8M12 16v5M6 3h12v5a6 6 0 0 1-12 0zM10 6l4 4M14 6l-4 4',
-  star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
-  bookok: 'M2 5h6a4 4 0 0 1 4 3 4 4 0 0 1 4-3h6v14h-6a4 4 0 0 0-4 3 4 4 0 0 0-4-3H2zM14 11.5l1.5 1.5 3-3',
-  bookx: 'M2 5h6a4 4 0 0 1 4 3 4 4 0 0 1 4-3h6v14h-6a4 4 0 0 0-4 3 4 4 0 0 0-4-3H2zM14.5 9.5l3 3M17.5 9.5l-3 3',
-  zz: 'M4 11h5l-5 6h5M13 5h6l-6 7h6',
-  talk: 'M7 20v-1a3 3 0 0 1 3-3M17 20v-1a3 3 0 0 0-3-3M8.5 13a2 2 0 1 0 0-4M15.5 13a2 2 0 1 0 0-4M9 2h9a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-4l-3 2V9H9z',
-  faceangry: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8 9l2 1M16 9l-2 1M9 16c2-1.5 4-1.5 6 0',
-  faceflat: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 10h.01M15 10h.01M9 15.5h6',
-  bookoff: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM9 7l7 7',
-  cap: 'M2 9l10-5 10 5-10 5zM6 11v5c3 2.5 9 2.5 12 0v-5M22 9v6',
-  alert: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v6M12 16.5h.01',
-  docminus: 'M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM9 14h6',
-  eyeoff: 'M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A9.7 9.7 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.6 6.6A17 17 0 0 0 2 12s4 7 10 7a9.7 9.7 0 0 0 5.4-1.6',
-  cup: 'M7 3h10l-.8 6.5a4.2 4.2 0 0 1-8.4 0zM12 14v7M8.5 21h7',
-  userok: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 13-3.5M16 11l2 2 4-4',
-  xcircle: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM9 9l6 6M15 9l-6 6',
-  // الحضور
-  ucheck: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 11l2 2 4-4',
-  ux: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 8l4 4M21 8l-4 4',
-  uexcl: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M20 6v5M20 14h.01',
-  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
-  remote: 'M3 4h18v12H3zM8 20h8M12 16v4M12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9 14a3 3 0 0 1 6 0',
-  run: 'M14 5a1.6 1.6 0 1 0 0-.01M10 21l2.5-6 3 3V21M7 12l3-3.5 4 1 2.5 3 3 .5M10.5 8.5 8.5 14',
+// ---- الأيقونات: من مكتبة Font Awesome (fa.js)، والأسماء القصيرة هنا تدل عليها ----
+const ALIAS = {
+  x: 'xmark', back: 'chevron-right', next: 'chevron-left', more: 'ellipsis', search: 'magnifying-glass', home: 'house',
+  follow: 'clipboard-check', doc: 'file-lines', tools: 'screwdriver-wrench', file: 'file-excel', edit: 'pen', down: 'download', up: 'upload',
+  send: 'paper-plane', undo: 'rotate-left', book: 'book-open-reader', timer: 'stopwatch',
+  // أسماء الإصدار ٤ للتقييمات (محفوظة في بيانات المعلم)
+  headok: 'microphone', headx: 'person-walking-arrow-right', trophyx: 'person-falling-burst', bookok: 'book-open', bookx: 'file-circle-xmark',
+  zz: 'bed', talk: 'comments', faceangry: 'face-angry', faceflat: 'face-meh', bookoff: 'book', cap: 'graduation-cap', alert: 'circle-exclamation',
+  docminus: 'book-quran', eyeoff: 'eye-slash', cup: 'utensils', userok: 'user-tie', xcircle: 'circle-xmark',
 };
-const ic = (n, cls = '') => `<svg class="ic${cls ? ` ${cls}` : ''}" viewBox="0 0 24 24" aria-hidden="true"><path d="${G[n] || ''}"/></svg>`;
-// صورة الطالب: الصورة الزرقاء العامة
-const AVATAR = '<svg class="avatar" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="50" fill="var(--blue)"/><circle cx="50" cy="50" r="44" fill="#fff"/><path fill="var(--blue)" d="M50 18c-10 0-17 8-17 18 0 6 2 11 5 14-1 3-3 6-7 7-10 3-17 9-17 9a44 44 0 0 0 72 0s-7-6-17-9c-4-1-6-4-7-7 3-3 5-8 5-14 0-10-7-18-17-18z"/></svg>';
+const faName = (n) => (FA[n] ? n : FA[ALIAS[n]] ? ALIAS[n] : '');
+const ic = (n, cls = '') => { const f = FA[faName(n)]; return f ? `<svg class="ic${cls ? ` ${cls}` : ''}" viewBox="0 0 ${f[0]} 512" aria-hidden="true"><path d="${f[1]}"/></svg>` : ''; };
+// صورة الطالب: الدائرة الزرقاء بصورة الشخص
+const AVATAR = `<svg class="avatar" viewBox="0 0 ${FA['circle-user'][0]} 512" aria-hidden="true"><path fill="var(--blue)" d="${FA['circle-user'][1]}"/></svg>`;
 
 // التقييمات كما رتّبها المعلم في كشوف (الدرجة لكل مرة)، ويعدّلها من الإعدادات
 const EVAL_DEFAULT = [
-  ['part', 'مشاركة', 'check', '#5fcf80', 1], ['wrong', 'خطأ', 'x', '#ee4d6a', -1],
-  ['recite', 'سمّع', 'headok', '#4fcdb6', 2], ['out', 'خروج بلا استئذان', 'headx', '#ef7366', -2],
-  ['chaos', 'الوقوف أو اللعب داخل الفصل أو إثارة فوضى', 'trophyx', '#e8457f', -1], ['beh', 'مميز سلوكيًا', 'star', '#f2b45a', 2],
-  ['hw', 'حل الواجب', 'bookok', '#4cbf74', 0.5], ['nohw', 'لم يحل الواجب', 'bookx', '#e9506b', -0.5],
-  ['sleep', 'النوم في الحصة', 'zz', '#3f8ee6', -0.5], ['talk', 'التحدث أثناء حديث المعلم إليهم', 'talk', '#7a40e0', -1],
-  ['naughty', 'مشاغب', 'faceangry', '#8dd0f2', -2], ['words', 'ألفاظ سيئة أو تلفظ على زميله', 'faceflat', '#f08a3c', -1],
-  ['nobook', 'نسيان الكتاب', 'bookoff', '#f2b46a', -0.5], ['hifz', 'سمع', 'cap', '#8ef05a', 5],
-  ['midhifz', 'متوسط الحفظ', 'alert', '#9fd3df', 2.5], ['nomushaf', 'نسى المصحف', 'docminus', '#ec4d63', 0],
-  ['noread', 'لا يعرف القراءة', 'eyeoff', '#ef4e66', -1], ['eat', 'الأكل داخل الصف', 'cup', '#ec4d6c', -1],
-  ['neat', 'الأناقة الشخصية', 'userok', '#efd36a', 1], ['damage', 'العبث بممتلكات الحكومة', 'xcircle', '#1f3f7a', 0],
+  ['part', 'مشاركة', 'check', '#5fcf80', 1], ['wrong', 'خطأ', 'xmark', '#ee4d6a', -1],
+  ['recite', 'سمّع', 'microphone', '#4fcdb6', 2], ['out', 'خروج بلا استئذان', 'person-walking-arrow-right', '#ef7366', -2],
+  ['chaos', 'الوقوف أو اللعب داخل الفصل أو إثارة فوضى', 'person-falling-burst', '#e8457f', -1], ['beh', 'مميز سلوكيًا', 'star', '#f2b45a', 2],
+  ['hw', 'حل الواجب', 'book-open', '#4cbf74', 0.5], ['nohw', 'لم يحل الواجب', 'file-circle-xmark', '#e9506b', -0.5],
+  ['sleep', 'النوم في الحصة', 'bed', '#3f8ee6', -0.5], ['talk', 'التحدث أثناء حديث المعلم إليهم', 'comments', '#7a40e0', -1],
+  ['naughty', 'مشاغب', 'face-angry', '#8dd0f2', -2], ['words', 'ألفاظ سيئة أو تلفظ على زميله', 'face-meh', '#f08a3c', -1],
+  ['nobook', 'نسيان الكتاب', 'book', '#f2b46a', -0.5], ['hifz', 'سمع', 'graduation-cap', '#8ef05a', 5],
+  ['midhifz', 'متوسط الحفظ', 'circle-exclamation', '#9fd3df', 2.5], ['nomushaf', 'نسى المصحف', 'book-quran', '#ec4d63', 0],
+  ['noread', 'لا يعرف القراءة', 'eye-slash', '#ef4e66', -1], ['eat', 'الأكل داخل الصف', 'utensils', '#ec4d6c', -1],
+  ['neat', 'الأناقة الشخصية', 'user-tie', '#efd36a', 1], ['damage', 'العبث بممتلكات الحكومة', 'circle-xmark', '#1f3f7a', 0],
 ];
-const EVAL_GLYPHS = ['check', 'x', 'headok', 'headx', 'trophyx', 'star', 'bookok', 'bookx', 'zz', 'talk', 'faceangry', 'faceflat', 'bookoff', 'cap', 'alert', 'docminus', 'eyeoff', 'cup', 'userok', 'xcircle', 'hand', 'clock', 'bolt', 'book'];
+const EVAL_GLYPHS = ['check', 'xmark', 'microphone', 'person-walking-arrow-right', 'person-falling-burst', 'star', 'book-open', 'file-circle-xmark', 'bed', 'comments', 'face-angry', 'face-meh', 'face-smile', 'book', 'graduation-cap', 'circle-exclamation', 'book-quran', 'eye-slash', 'utensils', 'user-tie', 'circle-xmark', 'hand', 'thumbs-up', 'thumbs-down', 'heart', 'lightbulb', 'brain', 'medal', 'award', 'trophy', 'mobile-screen', 'pencil', 'clock', 'bolt', 'mosque', 'children'];
 const EVAL_COLORS = ['#5fcf80', '#4cbf74', '#4fcdb6', '#8ef05a', '#3f8ee6', '#8dd0f2', '#9fd3df', '#7a40e0', '#f2b45a', '#efd36a', '#f2b46a', '#f08a3c', '#ef7366', '#ee4d6a', '#e8457f', '#1f3f7a'];
 // حالات الحضور السبع
 const ATT = [
-  ['p', 'حاضر', 'ucheck', '#66c470'], ['a', 'غائب', 'ux', '#ef4b5f'], ['x', 'مستأذن', 'uexcl', '#3b82f6'], ['l', 'متأخر', 'clock', '#f2a03c'],
-  ['r', 'عن بعد', 'remote', '#8e3bbf'], ['e', 'غائب بعذر', 'ux', '#4b4fb8'], ['h', 'هارب', 'run', '#111'],
+  ['p', 'حاضر', 'user-check', '#66c470'], ['a', 'غائب', 'user-xmark', '#ef4b5f'], ['x', 'مستأذن', 'person-circle-exclamation', '#3b82f6'], ['l', 'متأخر', 'clock', '#f2a03c'],
+  ['r', 'عن بعد', 'desktop', '#8e3bbf'], ['e', 'غائب بعذر', 'file-medical', '#4b4fb8'], ['h', 'هارب', 'person-running', '#111'],
 ];
 const attInfo = (v) => ATT.find((a) => a[0] === v) || ATT[0];
 // أعمال السنة: خمسة بنود، لكل منها درجة كاملة
@@ -98,7 +65,7 @@ function normalize(d) {
   d = d && typeof d === 'object' ? d : {};
   const arr = (x) => (Array.isArray(x) ? x : []);
   const st = d.settings || {};
-  const evals = arr(d.evals).filter((e) => e && e.k && e.name).map((e) => ({ k: String(e.k), name: String(e.name), g: G[e.g] ? e.g : 'check', c: String(e.c || '#5fcf80'), w: Number(e.w) || 0 }));
+  const evals = arr(d.evals).filter((e) => e && e.k && e.name).map((e) => ({ k: String(e.k), name: String(e.name), g: faName(e.g) ? e.g : 'check', c: String(e.c || '#5fcf80'), w: Number(e.w) || 0 }));
   return {
     ...d,
     settings: { ...st, teacher: String(st.teacher || ''), subject: String(st.subject || 'الدراسات الإسلامية') },

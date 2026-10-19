@@ -14,7 +14,7 @@ Views.home = () => {
     <div class="cls-grid">${list.map((c) => {
       const lv = classLevel(c.id);
       const C = 2 * Math.PI * 16;
-      return `<div class="cls-card" data-act="go" data-h="#c/${c.id}/follow">
+      return `<div class="cls-card" data-act="go" data-h="#c/${c.id}/follow"><span class="cls-art">${ic('book-quran')}</span>
         <button type="button" class="dots-btn" data-act="cls-more" data-id="${c.id}" aria-label="خيارات">${ic('more')}</button>
         <b class="cls-name">${esc(c.name)}</b>
         <div class="cls-lv"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="r-bg"/><circle cx="20" cy="20" r="16" class="r-fg" style="stroke-dasharray:${C};stroke-dashoffset:${C * (1 - lv / 100)}"/><text x="20" y="24">${lv}%</text></svg><span>| مستوى الفصل</span></div>
@@ -78,6 +78,8 @@ Acts.ev = (el) => {
   const b = { id: uid(), sid: evalSid, d: today(), at: Date.now(), icon: e.k, reason: e.name, w: e.w };
   T.beh.push(b);
   save(); refresh();
+  const row = $('sheetBody').querySelector(`.ev-row[data-k="${e.k}"]`);
+  if (row) row.classList.add('hit');
   if (navigator.vibrate) navigator.vibrate(15);
   toast(`${e.name}: ${shortName(stuOf(evalSid))} (${fmt1(e.w)})`, () => { T.beh = T.beh.filter((x) => x.id !== b.id); save(); refresh(); });
 };
