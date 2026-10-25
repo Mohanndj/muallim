@@ -8,10 +8,10 @@ const match = (s) => !UI.q.trim() || s.name.includes(UI.q.trim());
 // ---- الفصول ----
 Views.home = () => {
   const list = T.classes.filter((c) => !UI.q.trim() || c.name.includes(UI.q.trim()));
-  return `<header class="home-h"><div><h1>الفصول</h1><p>إدارة الفصول ومتابعة مستواهم</p></div>
+  return `<header class="home-h"><div><h1>الفصول</h1><p>إدارة الفصول ومتابعة مستواهم</p><span class="home-date">${ic('calendar-check')} ${dateLabel(today())} | ${hijriDate()}</span></div>
       <div class="round-btns"><button type="button" class="round" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div></header>
-    ${searchBar()}
-    <div class="cls-grid">${list.map((c) => {
+    ${T.classes.length ? searchBar() : `<div class="home-empty"><i>${ic('school')}</i><h2>أهلاً بك${T.settings.teacher ? ` ${esc(T.settings.teacher)}` : ''}</h2><p>ابدأ بإضافة فصلك الأول، ثم أضف طلابه من كشف نور أو بلصق أسمائهم.</p><button type="button" class="blue-btn" data-act="cls-new">${ic('plus')} أضف فصلاً</button></div>`}
+    ${T.classes.length ? `<div class="cls-grid">${list.map((c) => {
       const lv = classLevel(c.id);
       const C = 2 * Math.PI * 16;
       return `<div class="cls-card" data-act="go" data-h="#c/${c.id}/follow"><span class="cls-art">${ic('book-quran')}</span>
@@ -19,7 +19,7 @@ Views.home = () => {
         <b class="cls-name">${esc(c.name)}</b>
         <div class="cls-lv"><svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="r-bg"/><circle cx="20" cy="20" r="16" class="r-fg" style="stroke-dasharray:${C};stroke-dashoffset:${C * (1 - lv / 100)}"/><text x="20" y="24">${lv}%</text></svg><span>| مستوى الفصل</span></div>
         <span class="cls-n">${ic('users')} ${studentsIn(c.id).length} طالب</span></div>`;
-    }).join('')}<button type="button" class="cls-add" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div>`;
+    }).join('')}<button type="button" class="cls-add" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div>` : ''}`;
 };
 
 // ---- رأس صفحة الفصل ----

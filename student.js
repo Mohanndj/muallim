@@ -28,8 +28,8 @@ function smRender() {
 Acts['stu-more'] = (el) => { smSid = el.dataset.id; smOpen(''); };
 Acts.sm = (el) => {
   const k = el.dataset.k;
-  if (k === 'chat') { const s = smS(); if (!phoneOk(s.phone)) { toast('أضف جوال ولي الأمر أولاً'); smOpen('edit'); return; } window.open(`https://wa.me/${s.phone}`, '_blank'); return; }
-  if (k === 'file') { const s = smS(); if (!phoneOk(s.phone)) { toast('أضف جوال ولي الأمر أولاً'); smOpen('edit'); return; } window.open(waLink(s.phone, fileText(s)), '_blank'); return; }
+  if (k === 'chat') { const s = smS(); if (!phoneOk(s.phone)) { toast('أضف جوال ولي الأمر أولاً'); smOpen('edit'); return; } logAct('msg:chat', s.id); window.open(`https://wa.me/${s.phone}`, '_blank'); return; }
+  if (k === 'file') { const s = smS(); if (!phoneOk(s.phone)) { toast('أضف جوال ولي الأمر أولاً'); smOpen('edit'); return; } logAct('msg:file', s.id); window.open(waLink(s.phone, fileText(s)), '_blank'); return; }
   if (k === 'print') { printStudent(smS()); return; }
   smOpen(k);
 };
@@ -83,6 +83,7 @@ Acts['honor-send'] = (el) => {
   const s = smS();
   if (!phoneOk(s.phone)) { toast('أضف جوال ولي الأمر أولاً'); return; }
   honorLog(k);
+  logAct('msg:honor', s.id);
   window.open(waLink(s.phone, `السلام عليكم ورحمة الله وبركاته\nولي أمر الطالب ${s.name} حفظه الله\nيسعدنا إبلاغكم بحصول ابنكم على «${name}» ${why} في مادة ${T.settings.subject}.\nبارك الله فيه وجزاكم خيراً.${sig()}`), '_blank');
   refresh();
 };
@@ -177,6 +178,7 @@ Acts['weak-add'] = (f) => {
 Acts['weak-send'] = (el) => {
   const w = listOf('weak').find((x) => x.id === el.dataset.id), s = smS();
   if (!phoneOk(s.phone)) { toast('أضف جوال ولي الأمر أولاً'); return; }
+  logAct('msg:weak', s.id);
   window.open(waLink(s.phone, `السلام عليكم ورحمة الله وبركاته\nولي أمر الطالب ${s.name} حفظه الله\nنفيدكم بملاحظة ضعف لدى ابنكم في مادة ${T.settings.subject} في: ${w.areas.join('، ')}.${w.note ? `\n${w.note}` : ''}\nنأمل متابعته، وثقتنا بكم كبيرة.${sig()}`), '_blank');
 };
 Acts['weak-print'] = (el) => {

@@ -35,8 +35,9 @@ function beep(n = 3) {
 function onSheetClose() {
   clearInterval(toolTimer); toolTimer = null;
   if (mic) { mic.getTracks().forEach((t) => t.stop()); mic = null; }
+  if (pfD) { pfOrphans(); pfD = null; }
 }
-Acts.tool = (el) => ({ minute: () => countdown('الدقيقة الواحدة', 60, true), timer: () => timerSheet(), peer: peerSheet, pick: pickSheet, notes: notesSheet, calm: calmSheet, groups: groupsSheet, secret: secretSheet }[el.dataset.k])();
+Acts.tool = (el) => (logAct(`tool:${el.dataset.k}`), { minute: () => countdown('الدقيقة الواحدة', 60, true), timer: () => timerSheet(), peer: peerSheet, pick: pickSheet, notes: notesSheet, calm: calmSheet, groups: groupsSheet, secret: secretSheet }[el.dataset.k])();
 
 // العدّ التنازلي (الدقيقة الواحدة والمؤقت)
 let cd = null;
@@ -251,7 +252,7 @@ ${neg.length ? `الملاحظات:\n${neg.join('\n')}` : 'الملاحظات: �
 مجموع النقاط: ${fmtScore(scoreOf(s.id))}
 شاكرين تعاونكم.${sig()}`;
 }
-Acts['send-file'] = (el) => { const s = stuOf(el.dataset.id); window.open(waLink(s.phone, fileText(s)), '_blank'); };
+Acts['send-file'] = (el) => { const s = stuOf(el.dataset.id); logAct('msg:file', s.id); window.open(waLink(s.phone, fileText(s)), '_blank'); };
 let sentNow = new Set();
 Acts['abs-notify'] = () => { sentNow = new Set(); openSheet(absHTML(), absHTML); };
 function absHTML() {
@@ -261,6 +262,7 @@ function absHTML() {
 }
 Acts['abs-send'] = (el) => {
   const s = stuOf(el.dataset.id);
+  logAct('msg:abs', s.id);
   window.open(waLink(s.phone, `السلام عليكم ورحمة الله وبركاته\nولي أمر الطالب ${s.name} حفظه الله\nنفيدكم بغياب ابنكم اليوم ${dateLabel(today())} عن حصة ${T.settings.subject}.${sig()}`), '_blank');
   sentNow.add(s.id); refresh();
 };
@@ -344,12 +346,13 @@ function eveIconHTML() {
 }
 Acts['eve-g'] = (el) => { evalOf(eveK).g = el.dataset.g; save(); refresh(); };
 Acts['eve-c'] = (el) => { evalOf(eveK).c = el.dataset.c; save(); refresh(); };
-Acts['bk-out'] = () => download(new Blob([JSON.stringify({ app: 'muallim', v: APP_VERSION, at: Date.now(), data: T })], { type: 'application/json' }), `muallim-backup-${today()}.json`);
+// النسخة تحمل صور ملف الإنجاز كذلك
+Acts['bk-out'] = async () => download(new Blob([JSON.stringify({ app: 'muallim', v: APP_VERSION, at: Date.now(), data: T, media: await Media.all().catch(() => ({})) })], { type: 'application/json' }), `muallim-backup-${today()}.json`);
 document.addEventListener('change', async (e) => {
   if (e.target.id !== 'bkIn' || !e.target.files[0]) return;
-  try { const j = JSON.parse(await e.target.files[0].text()); if (j.app !== 'muallim' || !j.data) throw new Error('x'); T = normalize(j.data); save(); render(); toast('استُرجعت النسخة'); } catch { toast('هذا الملف ليس نسخة من «مساعد المعلم»'); }
+  try { const j = JSON.parse(await e.target.files[0].text()); if (j.app !== 'muallim' || !j.data) throw new Error('x'); T = normalize(j.data); save(); for (const [id, v] of Object.entries(j.media || {})) await Media.put(id, v).catch(() => {}); render(); toast('استُرجعت النسخة'); } catch { toast('هذا الملف ليس نسخة من «مساعد المعلم»'); }
 });
-Acts.wipe = (el) => { if (!armed(el)) return; localStorage.removeItem(KEY); load(); go('#home'); toast('مُسحت البيانات'); };
+Acts.wipe = (el) => { if (!armed(el)) return; localStorage.removeItem(KEY); Media.clear(); load(); go('#home'); toast('مُسحت البيانات'); };
 
 // ---- قراءة الأسماء من إكسل أو من نص ----
 const H_NAME = /اسم\s*الطالب|^الاسم|^اسم$|الاسم\s*الرباعي|الاسم\s*الكامل|^name/i;
