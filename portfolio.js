@@ -32,7 +32,7 @@ function logAct(k, sid = '') {
 }
 const logOf = (pre) => (Array.isArray(T.log) ? T.log : []).filter((x) => x.k === pre || x.k.startsWith(`${pre}:`));
 const allOf = (key) => Object.values(T[key] || {}).flat();
-const MSG_NAMES = { abs: 'إبلاغ بالغياب', file: 'ملف الطالب', honor: 'تهنئة وشهادة', weak: 'إشعار ضعف', chat: 'محادثة' };
+const MSG_NAMES = { abs: 'إبلاغ بالغياب', file: 'ملف الطالب', honor: 'تهنئة وشهادة', weak: 'إشعار ضعف', test: 'درجة اختبار', chat: 'محادثة' };
 const TOOL_NAMES = { minute: 'الدقيقة الواحدة', peer: 'أسأل زميلك', pick: 'من يجيب؟', groups: 'مجموعات التعلم', timer: 'المؤقت', calm: 'كأس الهدوء', secret: 'الطالب السري', notes: 'المفكرة' };
 const toolCount = (keys) => keys.map((k) => [TOOL_NAMES[k], logOf(`tool:${k}`).length]).filter(([, n]) => n);
 const countsLine = (pairs) => pairs.map(([n, c]) => `${n}: ${c}`).join(' | ');
@@ -86,9 +86,13 @@ function autoEv(k) {
     add('أدوات ضبط الفصل', countsLine(toolCount(['timer', 'calm', 'secret']).map(([n, c]) => [n, `${c} مرة`])));
   } else if (k === 'analysis') {
     for (const a of T.classes.map(classAnalysis).filter((x) => x.rated)) add(a.c.name, `المتوسط ${a.avg}% | متقدم ${a.hi} | متوسط ${a.mid} | يحتاج دعماً ${a.lo}`);
+    for (const x of Array.isArray(T.exams) ? T.exams : []) for (const c of T.classes) { const st = exStats(x, c.id); if (st.sc.length) add(`${x.title} (${c.name})`, `المتوسط ${fmtScore(Math.round(st.avg * 10) / 10)} من ${fmtScore(st.tot)} | نجح ${st.pass} من ${st.sc.length}`); }
   } else if (k === 'assess') {
     for (const y of T.yw) { const n = T.students.filter((s) => typeof (T.marksYW[s.id] || {})[y.k] === 'number').length; add(`درجات ${y.name} المرصودة`, n ? `${n} طالباً` : ''); }
     add('تقويم يومي بالأيقونات', T.beh.length ? `${T.beh.length} تقييم` : '');
+    const xs = Array.isArray(T.exams) ? T.exams : [];
+    add('اختبارات أعددتها', xs.length ? `${xs.length} (${[...new Set(xs.flatMap((x) => x.qs.map((q) => ({ mc: 'اختيار', tf: 'صح وخطأ', text: 'مقالي' }[q.type]))))].join('، ')})` : '');
+    add('أوراق صحّحتها', xs.reduce((n, x) => n + Object.values(x.res || {}).reduce((m, r) => m + Object.values(r).filter((v) => !v.abs).length, 0), 0) || '');
   }
   return L;
 }

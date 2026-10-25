@@ -236,7 +236,7 @@ textarea { resize: vertical; }
 .empty { text-align: center; padding: 40px 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .empty .avatar { width: 90px; }
 .empty p { color: var(--muted); max-width: 340px; }
-.ev-edit { display: grid; gap: 6px; margin: 8px 0; }
+.ev-edit { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin: 8px 0; }
 .eve { display: flex; align-items: center; gap: 6px; }
 .eve input { flex: 1; min-width: 0; padding: 9px 10px; font-size: .92rem; }
 .eve input.eve-w { flex: none; width: 62px; text-align: center; }
@@ -425,3 +425,68 @@ main.enter > :nth-child(n+4) { animation-delay: .09s; }
 .card h3 { display: flex; align-items: center; gap: 8px; }
 @media (prefers-reduced-motion: reduce) { main.enter > * { animation: none; } }
 input[hidden] { display: none !important; }
+
+/* الاختبارات (الإصدار ٨) */
+.ex-list { display: grid; gap: 10px; }
+.ex-card { display: flex; align-items: center; gap: 12px; border: 0; background: var(--card); border-radius: 22px; padding: 14px; text-align: start; box-shadow: var(--shadow); transition: transform .12s; }
+.ex-card:active { transform: scale(.98); }
+.ex-card > i { width: 50px; height: 50px; border-radius: 15px; background: linear-gradient(150deg, #3f86f8, #2a62d8); color: #fff; display: grid; place-items: center; flex: none; }
+.ex-card > i .ic { width: 22px; height: 22px; }
+.ex-card .grow { display: flex; flex-direction: column; gap: 5px; }
+.ex-card b { font-size: 1.08rem; font-weight: 600; }
+.ex-card small { display: flex; flex-wrap: wrap; gap: 5px; }
+.ex-card em { font-style: normal; font-size: .76rem; border-radius: 99px; padding: 0 9px; background: var(--soft); color: var(--ink2); }
+.ex-card em.ok { background: #e6f6ea; color: #23843f; }
+.ex-card .chev { color: #b0b0b6; width: 16px; height: 16px; }
+.ex-step { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px !important; font-size: 1rem !important; }
+.ex-step b { width: 26px; height: 26px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: .85rem; flex: none; }
+.ex-step b:empty { display: none; }
+.row2.tight { margin: 0 0 8px; }
+.ex-pre { background: var(--bg); border-radius: 14px; padding: 10px 12px; font: .85rem/1.6 var(--f); white-space: pre-wrap; margin: 0 0 8px; }
+#exText { font-size: .95rem; line-height: 1.7; }
+.ex-q { border-top: 1px solid var(--line); padding: 9px 0; }
+.ex-q:first-of-type { border-top: 0; }
+.ex-q b { font-weight: 600; }
+.ex-q em { font-style: normal; font-size: .74rem; color: var(--blue); background: var(--blue-soft); border-radius: 99px; padding: 0 8px; white-space: nowrap; }
+.ex-q.bad { background: #fff3f5; border-radius: 12px; padding: 9px 10px; margin: 4px 0; }
+.ex-q p.red { display: flex; align-items: center; gap: 6px; font-size: .88rem; margin-top: 4px; }
+.ex-opts { list-style: none; padding: 0; margin: 4px 0 0; display: grid; gap: 3px; }
+.ex-opts li { font-size: .9rem; color: var(--ink2); padding: 2px 8px; border-radius: 8px; }
+.ex-opts li.ok { background: #e6f6ea; color: #23843f; font-weight: 600; }
+.ex-a { font-size: .88rem; color: #23843f; margin-top: 3px; }
+.ex-hero { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-bottom: 12px; }
+.ex-hero div { background: var(--card); border-radius: 18px; padding: 10px 6px; text-align: center; box-shadow: var(--shadow); display: flex; flex-direction: column; min-width: 0; }
+.ex-hero b { font-size: 1.25rem; color: var(--blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ex-hero small { color: var(--muted); font-size: .78rem; }
+.ex-lesson { display: flex; align-items: center; gap: 6px; margin: -4px 4px 12px; }
+.ex-print { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.ex-print .ghost-btn { padding: 11px 6px; }
+.ex-cls { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; border-top: 1px solid var(--line); background: none; padding: 11px 0; text-align: start; }
+.ex-cls:first-of-type { border-top: 0; }
+.ex-cls .grow { display: flex; flex-direction: column; }
+.ex-cls small { color: var(--muted); }
+.ex-bar { height: 8px; border-radius: 9px; background: var(--soft); overflow: hidden; }
+.ex-bar i { display: block; height: 100%; border-radius: 9px; background: linear-gradient(90deg, #5fcf80, #2fa36b); }
+.pill-blue.part { background: #9fbff7; }
+.scard.ex-s { align-items: center; padding: 10px 14px; }
+.scard.ex-s .sc-av { width: 52px; }
+.ex-live { margin-inline-start: auto; background: var(--blue); color: #fff; border-radius: 99px; padding: 2px 14px; font-weight: 700; direction: ltr; }
+.ex-mode { margin: 0 0 8px; }
+.chip.red-on { background: var(--red); color: #fff; }
+.ex-g { background: var(--card); border-radius: 18px; padding: 12px; margin-bottom: 8px; border-inline-start: 5px solid transparent; }
+.ex-g.ok { border-color: #5fcf80; }
+.ex-g.half { border-color: #f2b45a; }
+.ex-g.no { border-color: var(--red); }
+.ex-g p { margin: 0 0 8px; }
+.ex-g em { font-style: normal; color: var(--muted); font-size: .85rem; }
+.ex-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ex-btns button { border: 1px solid var(--line); background: var(--bg); border-radius: 14px; padding: 9px 10px; text-align: start; display: flex; align-items: center; gap: 8px; font-size: .92rem; transition: background .12s, transform .1s; }
+.ex-btns button:active { transform: scale(.97); }
+.ex-btns button b { width: 26px; height: 26px; border-radius: 50%; background: var(--card); display: grid; place-items: center; flex: none; font-size: .85rem; }
+.ex-btns button.ok { background: #5fcf80; border-color: #5fcf80; color: #fff; }
+.ex-btns button.no { background: var(--red); border-color: var(--red); color: #fff; }
+.ex-btns button.ok b, .ex-btns button.no b { background: rgba(255, 255, 255, .25); }
+.ex-btns.two button { justify-content: center; font-weight: 700; }
+.ex-btns.marks { display: flex; flex-wrap: wrap; }
+.ex-btns.marks button { justify-content: center; min-width: 52px; direction: ltr; }
+.ex-btns.marks button.on { background: var(--blue); border-color: var(--blue); color: #fff; }
