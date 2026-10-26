@@ -66,6 +66,9 @@ public class MainActivity extends Activity {
   }
   String lesson;
   SharedPreferences prefs;
+  // طريقة فتح المنصة: ٠ متصفح التطبيق كما هو، ٢ طلبات الصفحات يجلبها التطبيق بنفسه (إن رفضت المنصة الأولى)
+  int mode;
+  String agent;
 
   @Override
   protected void onCreate(Bundle b) {
@@ -91,7 +94,8 @@ public class MainActivity extends Activity {
     web.setDownloadListener(new android.webkit.DownloadListener() {
       public void onDownloadStart(String url, String ua, String cd, String mime, long len) { note("download", url + " " + mime + " " + cd + " " + len); }
     });
-    s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replace("Version/4.0 ", ""));
+    agent = s.getUserAgentString().replace("; wv", "").replace("Version/4.0 ", "");
+    mode = prefs.getInt("mode", 0);
     // بعض المواقع الحكومية ترفض ما يأتي من داخل التطبيقات (رأس X-Requested-With باسم التطبيق): لا يُرسل
     if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) WebSettingsCompat.setRequestedWithHeaderOriginAllowList(s, Collections.<String>emptySet());
     CookieManager.getInstance().setAcceptCookie(true);
@@ -158,10 +162,17 @@ public class MainActivity extends Activity {
       @Override
       public void onPageCommitVisible(WebView v, String url) { note("visible", url); }
       @Override
+      public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) { return mode == 2 ? fetch(r) : null; }
+      @Override
       public boolean onRenderProcessGone(WebView v, android.webkit.RenderProcessGoneDetail d) { note("render-gone", String.valueOf(d.didCrash())); return true; }
       @Override
       public void onPageFinished(WebView v, String url) {
         note("finish", url);
+        // المنصة لم تُفتح أصلاً (لا عنوان للصفحة): تُجرَّب الطريقة الأخرى وحدها
+        if (v.getUrl() == null && url != null && url.contains("madrasati")) {
+          if (mode == 0) { mode = 2; prefs.edit().putInt("mode", 2).apply(); note("mode", "2"); v.loadUrl(url); return; }
+          show("منصة مدرستي لم تفتح داخل التطبيق. اضغط هنا لإعادة المحاولة، أو اضغط مطوّلاً على الزر الأخضر وأرسل التقرير");
+        }
         if (learnJs != null) v.evaluateJavascript(learnJs, null);
         // صفحة بيضاء بعد التحميل: يُقال ذلك بدل السكوت
         v.evaluateJavascript("(document.body&&document.body.innerText||'').trim().length", new android.webkit.ValueCallback<String>() {
@@ -216,6 +227,60 @@ public class MainActivity extends Activity {
       Toast.makeText(this, "وصل تحضير «" + t + "». افتح إعداد الدرس واضغط «عبّئ التحضير»", Toast.LENGTH_LONG).show();
     }
     if (first || web.getUrl() == null) web.loadUrl(HOME);
+  }
+
+  // الطريقة الثانية: صفحات المنصة (طلبات GET) يجلبها التطبيق بنفسه بلا علامات «المتصفح الداخلي»،
+  // مع الكوكيز نفسها، والتحويل إلى صفحة أخرى يصير تحويلاً داخل الصفحة
+  WebResourceResponse fetch(WebResourceRequest r) {
+    try {
+      Uri u = r.getUrl();
+      String host = u.getHost();
+      if (!"GET".equalsIgnoreCase(r.getMethod()) || host == null || !(host.equals("madrasati.sa") || host.endsWith(".madrasati.sa"))) return null;
+      String url = u.toString();
+      CookieManager cm = CookieManager.getInstance();
+      for (int hop = 0; hop < 6; hop++) {
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setInstanceFollowRedirects(false);
+        c.setConnectTimeout(15000);
+        c.setReadTimeout(30000);
+        for (java.util.Map.Entry<String, String> e : r.getRequestHeaders().entrySet()) {
+          String k = e.getKey().toLowerCase();
+          if (k.equals("x-requested-with") || k.equals("accept-encoding") || k.startsWith("sec-ch-ua") || k.equals("cookie")) continue;
+          c.setRequestProperty(e.getKey(), e.getValue());
+        }
+        c.setRequestProperty("User-Agent", agent);
+        String ck = cm.getCookie(url);
+        if (ck != null) c.setRequestProperty("Cookie", ck);
+        int code = c.getResponseCode();
+        java.util.List<String> sc = c.getHeaderFields().get("Set-Cookie");
+        if (sc != null) for (String x : sc) cm.setCookie(url, x);
+        if (code >= 300 && code < 400 && c.getHeaderField("Location") != null) {
+          String to = new URL(new URL(url), c.getHeaderField("Location")).toString();
+          if (r.isForMainFrame()) {
+            String html = "<!doctype html><script>location.replace(" + org.json.JSONObject.quote(to) + ")</script>";
+            return new WebResourceResponse("text/html", "utf-8", new java.io.ByteArrayInputStream(html.getBytes("UTF-8")));
+          }
+          url = to;
+          continue;
+        }
+        String ct = c.getContentType();
+        String mime = ct == null ? "application/octet-stream" : ct.split(";")[0].trim();
+        String cs = ct != null && ct.toLowerCase().contains("charset=") ? ct.substring(ct.toLowerCase().indexOf("charset=") + 8).trim() : null;
+        java.util.Map<String, String> hs = new java.util.HashMap<>();
+        for (java.util.Map.Entry<String, java.util.List<String>> e : c.getHeaderFields().entrySet()) {
+          if (e.getKey() == null || e.getValue().isEmpty()) continue;
+          String k = e.getKey().toLowerCase();
+          if (k.equals("content-encoding") || k.equals("content-length") || k.equals("transfer-encoding") || k.equals("set-cookie")) continue;
+          hs.put(e.getKey(), android.text.TextUtils.join(", ", e.getValue()));
+        }
+        InputStream in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+        if (in == null) in = new java.io.ByteArrayInputStream(new byte[0]);
+        String why = c.getResponseMessage();
+        if (r.isForMainFrame()) note("fetch", code + " " + url);
+        return new WebResourceResponse(mime, cs, code, why == null || why.isEmpty() ? "OK" : why, hs, in);
+      }
+    } catch (Exception e) { note("fetch-fail", r.getUrl() + " " + e); }
+    return null;
   }
 
   // ماذا يردّ موقع مدرستي على طلب عادي من التطبيق (بلا المتصفح الداخلي): الحالة والتحويل ونوع المحتوى وبدايته
