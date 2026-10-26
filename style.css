@@ -517,3 +517,6 @@ input[hidden] { display: none !important; }
 .pr-chips button.on { background: #1a8f5c; border-color: #1a8f5c; color: #fff; }
 .pr-chips button .ic { width: 11px; height: 11px; }
 .sm-sec small { font-weight: 400; }
+a.wa-btn, a.link { text-decoration: none; }
+.md-open { margin: 2px 0 6px; }
+.md-link { margin: -6px 4px 6px; }

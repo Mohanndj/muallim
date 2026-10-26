@@ -10,13 +10,17 @@ const MD_URL = 'https://mohanndj.github.io/muallim/mdpage.js';
 const mdBookmark = () => `javascript:${encodeURIComponent(`(function(){var s=document.createElement('script');s.src='${MD_URL}?'+Date.now();s.onerror=function(){(${window.mdFillSrc})()};document.head.appendChild(s)})()`)}`;
 
 // ---- في التطبيق: نسخ التحضير للتعبئة، وتجهيز الزر مرة واحدة ----
+// منصة مدرستي تُفتح في تطبيق كروم نفسه (لا في نافذة التطبيق المصغرة) حتى يعمل فيها زر «تعبئة»
+const MD_SITE = 'schools.madrasati.sa';
+const MD_OPEN = () => (/Android/i.test(navigator.userAgent) ? `intent://${MD_SITE}/#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(`https://${MD_SITE}/`)};end` : `https://${MD_SITE}/`);
 Acts['md-fill'] = async () => {
   // الزر يُجهَّز أولاً (نسخه يستبدل ما في الحافظة)، ثم يُنسخ التحضير
   if (!T.mdReady) { Acts['md-setup'](); return; }
   const l = lesOf(UI.les);
   try { await navigator.clipboard.writeText(`${MD_MARK}${JSON.stringify({ t: l.title, f: l.f || {} })}`); } catch { toast('تعذّر النسخ'); return; }
   openSheet(`<h3>${ic('check')} نُسخ تحضير «${esc(l.title)}»</h3>
-    <ol class="md-steps"><li>افتح صفحة تحضير هذا الدرس في <b>منصة مدرستي</b> في متصفح كروم.</li><li>اضغط شريط العنوان أعلى الصفحة، واكتب: <b>تعبئة</b></li><li>اختر من القائمة «تعبئة» (عليها علامة النجمة): يضغط «التالي»، ويؤشّر الأهداف والمحتوى الرقمي والاستراتيجيات والوسائل، ويكتب مهارات التفكير وإغلاق الدرس وتعليمات المعلم.</li><li>أضف واجباً أو نشاطاً (المنصة تشترطه)، وراجع، ثم «حفظ وإنهاء».</li></ol>
+    <a class="wa-btn wide md-open" href="${MD_OPEN()}" target="_blank" rel="noopener">${ic('school')} افتح منصة مدرستي في كروم</a>
+    <ol class="md-steps"><li>في مدرستي: افتح الجدول الدراسي، ثم الحصة، ثم «إعداد الدرس».</li><li>اضغط شريط العنوان أعلى الصفحة، واكتب: <b>تعبئة</b></li><li>اختر من القائمة «تعبئة» (عليها علامة النجمة): يضغط «التالي»، ويؤشّر الأهداف والمحتوى الرقمي والاستراتيجيات والوسائل، ويكتب مهارات التفكير وإغلاق الدرس وتعليمات المعلم.</li><li>أضف واجباً أو نشاطاً (المنصة تشترطه)، وراجع، ثم «حفظ وإنهاء».</li></ol>
     <button type="button" class="link" data-act="md-setup">${ic('gear')} جهّز زر «تعبئة» من جديد</button>`);
 };
 Acts['md-setup'] = () => openSheet(`<h3>جهّز زر «تعبئة» في كروم (مرة واحدة)</h3>
