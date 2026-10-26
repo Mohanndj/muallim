@@ -87,7 +87,7 @@ public class MainActivity extends Activity {
     s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
     WebView.setWebContentsDebuggingEnabled(true);
     web.addJavascriptInterface(new Rec(), "MlmRec");
-    new Thread(new Runnable() { public void run() { learnJs = get(LEARN); } }).start();
+    new Thread(new Runnable() { public void run() { learnJs = get(LEARN); note("learn", learnJs == null ? "not loaded" : "loaded " + learnJs.length()); } }).start();
     s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replace("Version/4.0 ", ""));
     // بعض المواقع الحكومية ترفض ما يأتي من داخل التطبيقات (رأس X-Requested-With باسم التطبيق): لا يُرسل
     if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) WebSettingsCompat.setRequestedWithHeaderOriginAllowList(s, Collections.<String>emptySet());
@@ -132,13 +132,28 @@ public class MainActivity extends Activity {
       public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
         Uri u = r.getUrl();
         String sc = u.getScheme();
+        note("nav", u + (r.isRedirect() ? " redirect" : "") + (r.hasGesture() ? " tap" : "") + (r.isForMainFrame() ? " main" : ""));
         if ("http".equals(sc) || "https".equals(sc)) return false;
-        // روابط تطبيقات أخرى (مثل نفاذ أو واتساب) تُفتح في تطبيقاتها
-        try { startActivity(Intent.parseUri(u.toString(), Intent.URI_INTENT_SCHEME)); } catch (Exception e) { /* لا تطبيق لها */ }
+        // توجيه إلى تطبيق (مثل «افتح في تطبيق مدرستي»): إن كان له رابط ويب يُفتح هنا بدل الصفحة البيضاء
+        if ("intent".equals(sc)) {
+          try {
+            Intent it = Intent.parseUri(u.toString(), Intent.URI_INTENT_SCHEME);
+            String fb = it.getStringExtra("browser_fallback_url");
+            Uri d = it.getData();
+            if (d != null && ("https".equals(d.getScheme()) || "http".equals(d.getScheme()))) { v.loadUrl(d.toString()); return true; }
+            if (fb != null && fb.startsWith("http") && !r.hasGesture()) { v.loadUrl(fb); return true; }
+            if (r.hasGesture()) startActivity(it);
+          } catch (Exception e) { note("intent-fail", e.toString()); }
+          return true;
+        }
+        // روابط تطبيقات أخرى (مثل نفاذ أو واتساب) تُفتح في تطبيقاتها إن ضغطها المعلم
+        if (r.hasGesture() || !r.isRedirect()) { try { startActivity(new Intent(Intent.ACTION_VIEW, u)); } catch (Exception e) { note("open-fail", u.toString()); } }
         return true;
       }
       @Override
       public void onPageStarted(WebView v, String url, android.graphics.Bitmap f) { note("start", url); }
+      @Override
+      public void onPageCommitVisible(WebView v, String url) { note("visible", url); }
       @Override
       public void onPageFinished(WebView v, String url) {
         note("finish", url);
