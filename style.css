@@ -522,3 +522,4 @@ a.wa-btn, a.link { text-decoration: none; }
 .md-link { margin: -6px 4px 6px; }
 .md-hint { background: var(--bg); border-radius: 14px; padding: 8px 12px; margin: 4px 0 10px; font-size: .9rem; }
 .md-hint summary { cursor: pointer; color: var(--blue); font-weight: 600; }
+.md-apk { margin: 0 0 12px; }
