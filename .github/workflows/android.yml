@@ -16,6 +16,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      # مفتاح التوقيع نفسه في كل بناء (محفوظ في ذاكرة GitHub لا في المستودع) حتى تُثبَّت النسخ الجديدة فوق القديمة
+      - uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
@@ -31,3 +36,10 @@ jobs:
           cp android/app/build/outputs/apk/release/app-release.apk muallim-madrasati.apk
           gh release view app >/dev/null 2>&1 || gh release create app --title "تحضير مدرستي" --notes "تطبيق أندرويد يفتح منصة مدرستي ويعبّئ تحضير الدرس من «مساعد المعلم»."
           gh release upload app muallim-madrasati.apk --clobber
+      # نسخة على موقع «مساعد المعلم» نفسه، لزر التثبيت في الإعدادات
+      - name: Copy to the site
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add muallim-madrasati.apk
+          git commit -m "Android app build ${{ github.run_number }}" && git pull --rebase origin main && git push origin HEAD:main || echo "no change"

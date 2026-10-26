@@ -15,8 +15,13 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.os.Message;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceResponse;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -31,6 +36,8 @@ public class MainActivity extends Activity {
   static final String FILLER = "https://mohanndj.github.io/muallim/mdpage.js";
   WebView web;
   Button fill;
+  ProgressBar bar;
+  TextView msg;
   String lesson;
   SharedPreferences prefs;
 
@@ -48,11 +55,43 @@ public class MainActivity extends Activity {
     s.setDatabaseEnabled(true);
     s.setLoadWithOverviewMode(true);
     s.setUseWideViewPort(true);
-    s.setSupportMultipleWindows(false);
+    // نوافذ الدخول (نفاذ وغيره) تُفتح في الصفحة نفسها
+    s.setSupportMultipleWindows(true);
+    s.setJavaScriptCanOpenWindowsAutomatically(true);
+    s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+    WebView.setWebContentsDebuggingEnabled(true);
     s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replace("Version/4.0 ", ""));
     CookieManager.getInstance().setAcceptCookie(true);
     CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
-    web.setWebChromeClient(new WebChromeClient());
+    // شريط تحميل أعلى الصفحة، وسطر يبيّن الخطأ إن لم تفتح الصفحة (كانت تبقى بيضاء بلا تفسير)
+    bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+    bar.setMax(100);
+    root.addView(bar, new FrameLayout.LayoutParams(-1, 12, Gravity.TOP));
+    msg = new TextView(this);
+    msg.setBackgroundColor(Color.parseColor("#fff3cd"));
+    msg.setTextColor(Color.parseColor("#5c4400"));
+    msg.setPadding(30, 24, 30, 24);
+    msg.setTextSize(14);
+    msg.setVisibility(View.GONE);
+    root.addView(msg, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
+    msg.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { msg.setVisibility(View.GONE); web.reload(); } });
+    web.setWebChromeClient(new WebChromeClient() {
+      @Override
+      public void onProgressChanged(WebView v, int p) { bar.setProgress(p); bar.setVisibility(p < 100 ? View.VISIBLE : View.GONE); }
+      @Override
+      public boolean onCreateWindow(WebView v, boolean dialog, boolean user, Message m) {
+        WebView pop = new WebView(MainActivity.this);
+        pop.setWebViewClient(new WebViewClient() {
+          @Override
+          public boolean shouldOverrideUrlLoading(WebView p, WebResourceRequest r) { web.loadUrl(r.getUrl().toString()); return true; }
+          @Override
+          public void onPageStarted(WebView p, String url, android.graphics.Bitmap f) { if (url != null && url.startsWith("http")) { web.loadUrl(url); p.stopLoading(); } }
+        });
+        ((WebView.WebViewTransport) m.obj).setWebView(pop);
+        m.sendToTarget();
+        return true;
+      }
+    });
     web.setWebViewClient(new WebViewClient() {
       @Override
       public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -62,6 +101,21 @@ public class MainActivity extends Activity {
         // روابط تطبيقات أخرى (مثل نفاذ أو واتساب) تُفتح في تطبيقاتها
         try { startActivity(Intent.parseUri(u.toString(), Intent.URI_INTENT_SCHEME)); } catch (Exception e) { /* لا تطبيق لها */ }
         return true;
+      }
+      @Override
+      public void onPageFinished(WebView v, String url) {
+        // صفحة بيضاء بعد التحميل: يُقال ذلك بدل السكوت
+        v.evaluateJavascript("(document.body&&document.body.innerText||'').trim().length", new android.webkit.ValueCallback<String>() {
+          public void onReceiveValue(String n) { if ("0".equals(n)) show("الصفحة فارغة: " + url + "\nاضغط هنا لإعادة التحميل"); }
+        });
+      }
+      @Override
+      public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
+        if (r.isForMainFrame()) show("لم تفتح الصفحة (" + e.getDescription() + "): " + r.getUrl() + "\nاضغط هنا لإعادة المحاولة");
+      }
+      @Override
+      public void onReceivedHttpError(WebView v, WebResourceRequest r, WebResourceResponse e) {
+        if (r.isForMainFrame()) show("ردّ الموقع بخطأ " + e.getStatusCode() + ": " + r.getUrl() + "\nاضغط هنا لإعادة المحاولة");
       }
     });
 
@@ -101,6 +155,8 @@ public class MainActivity extends Activity {
     }
     if (first || web.getUrl() == null) web.loadUrl(HOME);
   }
+
+  void show(String t) { msg.setText(t); msg.setVisibility(View.VISIBLE); }
 
   void runFill() {
     if (lesson == null) { Toast.makeText(this, "افتح الدرس في «مساعد المعلم» واضغط «عبّئ في مدرستي»", Toast.LENGTH_LONG).show(); return; }
