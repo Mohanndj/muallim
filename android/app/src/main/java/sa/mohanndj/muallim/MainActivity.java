@@ -52,6 +52,7 @@ public class MainActivity extends Activity {
   final ArrayList<String> rec = new ArrayList<>();
   String learnJs;
   String lastErr;
+  String probed = "";
 
   // ما يحدث في التطبيق نفسه (فتح الصفحات وأخطاؤها) يدخل في التقرير كذلك
   void note(String t, String v) {
@@ -162,6 +163,10 @@ public class MainActivity extends Activity {
       @Override
       public void onPageCommitVisible(WebView v, String url) { note("visible", url); }
       @Override
+      public void onReceivedHttpAuthRequest(WebView v, android.webkit.HttpAuthHandler h, String host, String realm) { note("auth", host + " " + realm); super.onReceivedHttpAuthRequest(v, h, host, realm); }
+      @Override
+      public void onReceivedSslError(WebView v, android.webkit.SslErrorHandler h, android.net.http.SslError e) { note("ssl", e.toString()); super.onReceivedSslError(v, h, e); }
+      @Override
       public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) { return mode == 2 ? fetch(r) : null; }
       @Override
       public boolean onRenderProcessGone(WebView v, android.webkit.RenderProcessGoneDetail d) { note("render-gone", String.valueOf(d.didCrash())); return true; }
@@ -171,7 +176,10 @@ public class MainActivity extends Activity {
         // المنصة لم تُفتح أصلاً (لا عنوان للصفحة): تُجرَّب الطريقة الأخرى وحدها
         if (v.getUrl() == null && url != null && url.contains("madrasati")) {
           if (mode == 0) { mode = 2; prefs.edit().putInt("mode", 2).apply(); note("mode", "2"); v.loadUrl(url); return; }
-          show("منصة مدرستي لم تفتح داخل التطبيق. اضغط هنا لإعادة المحاولة، أو اضغط مطوّلاً على الزر الأخضر وأرسل التقرير");
+          // ما يلزم لمعرفة السبب يظهر على الشاشة نفسها: تكفي صورتها
+          String tail;
+          synchronized (rec) { StringBuilder t = new StringBuilder(); for (int i = Math.max(0, rec.size() - 8); i < rec.size(); i++) t.append(rec.get(i).length() > 160 ? rec.get(i).substring(0, 160) : rec.get(i)).append('\n'); tail = t.toString(); }
+          show("منصة مدرستي لم تفتح داخل التطبيق (اضغط هنا لإعادة المحاولة)\nالطريقة " + mode + " | ردّ الموقع: " + probed + "\n" + tail);
         }
         if (learnJs != null) v.evaluateJavascript(learnJs, null);
         // صفحة بيضاء بعد التحميل: يُقال ذلك بدل السكوت
@@ -295,9 +303,10 @@ public class MainActivity extends Activity {
       StringBuilder h = new StringBuilder("status " + code);
       for (String k : new String[] { "Location", "Content-Type", "Content-Length", "Server", "Content-Security-Policy", "X-Frame-Options" }) { String v = c.getHeaderField(k); if (v != null) h.append(" | ").append(k).append(": ").append(v.length() > 200 ? v.substring(0, 200) : v); }
       note("probe", h.toString());
+      probed = h.toString();
       InputStream in = code < 400 ? c.getInputStream() : c.getErrorStream();
       if (in != null) { String body = read(in); note("body", body.length() + " " + body.replaceAll("\\s+", " ").substring(0, Math.min(600, body.length()))); }
-    } catch (Exception e) { note("probe-fail", e.toString()); }
+    } catch (Exception e) { note("probe-fail", e.toString()); probed = "fail " + e; }
   }
 
   @Override
