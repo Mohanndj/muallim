@@ -165,7 +165,14 @@ public class MainActivity extends Activity {
       @Override
       public void onReceivedHttpAuthRequest(WebView v, android.webkit.HttpAuthHandler h, String host, String realm) { note("auth", host + " " + realm); super.onReceivedHttpAuthRequest(v, h, host, realm); }
       @Override
-      public void onReceivedSslError(WebView v, android.webkit.SslErrorHandler h, android.net.http.SslError e) { note("ssl", e.toString()); super.onReceivedSslError(v, h, e); }
+      public void onReceivedSslError(WebView v, final android.webkit.SslErrorHandler h, final android.net.http.SslError e) {
+        note("ssl", e.toString());
+        // كروم يكمل شهادة الموقع الناقصة بنفسه والمتصفح الداخلي لا: يُكمَّل هنا ويُتحقق منها بشهادات الجوال الموثوقة
+        new Thread(new Runnable() { public void run() {
+          final boolean ok = chainOk(e);
+          runOnUiThread(new Runnable() { public void run() { if (ok) h.proceed(); else { h.cancel(); show("شهادة أمان موقع مدرستي لم تُقبل: " + e.getPrimaryError()); } } });
+        } }).start();
+      }
       @Override
       public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest r) { return mode == 2 ? fetch(r) : null; }
       @Override
@@ -289,6 +296,55 @@ public class MainActivity extends Activity {
       }
     } catch (Exception e) { note("fetch-fail", r.getUrl() + " " + e); }
     return null;
+  }
+
+  // شهادة الموقع ومعها الشهادة الوسيطة من عنوانها المكتوب فيها (AIA)، وتُفحص بموثوقات الجوال واسم الموقع
+  boolean chainOk(android.net.http.SslError e) {
+    try {
+      if (e.getPrimaryError() != android.net.http.SslError.SSL_UNTRUSTED || Build.VERSION.SDK_INT < 29) return false;
+      String host = Uri.parse(e.getUrl()).getHost();
+      if (host == null || !(host.equals("madrasati.sa") || host.endsWith(".madrasati.sa"))) return false;
+      java.security.cert.X509Certificate leaf = e.getCertificate().getX509Certificate();
+      if (leaf == null) return false;
+      java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
+      ArrayList<java.security.cert.X509Certificate> chain = new ArrayList<>();
+      chain.add(leaf);
+      java.security.cert.X509Certificate cur = leaf;
+      for (int i = 0; i < 3; i++) {
+        byte[] ext = cur.getExtensionValue("1.3.6.1.5.5.7.1.1");
+        if (ext == null) break;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("https?://[\\x21-\\x7e]+").matcher(new String(ext, "ISO-8859-1"));
+        String aia = null;
+        while (m.find()) { String x = m.group(); if (!x.toLowerCase().contains("ocsp")) { aia = x; break; } }
+        if (aia == null) break;
+        HttpURLConnection c = (HttpURLConnection) new URL(aia).openConnection();
+        c.setConnectTimeout(8000);
+        c.setReadTimeout(8000);
+        java.util.Collection<? extends java.security.cert.Certificate> cs = cf.generateCertificates(c.getInputStream());
+        java.security.cert.X509Certificate next = null;
+        for (java.security.cert.Certificate x : cs) { next = (java.security.cert.X509Certificate) x; break; }
+        if (next == null) break;
+        chain.add(next);
+        if (next.getSubjectX500Principal().equals(next.getIssuerX500Principal())) break;
+        cur = next;
+      }
+      javax.net.ssl.TrustManagerFactory tmf = javax.net.ssl.TrustManagerFactory.getInstance(javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+      tmf.init((java.security.KeyStore) null);
+      javax.net.ssl.X509TrustManager tm = null;
+      for (javax.net.ssl.TrustManager t : tmf.getTrustManagers()) if (t instanceof javax.net.ssl.X509TrustManager) tm = (javax.net.ssl.X509TrustManager) t;
+      String auth = "RSA".equals(leaf.getPublicKey().getAlgorithm()) ? "RSA" : "ECDHE_ECDSA";
+      tm.checkServerTrusted(chain.toArray(new java.security.cert.X509Certificate[0]), auth);
+      leaf.checkValidity();
+      // الاسم في الشهادة يطابق الموقع
+      boolean name = false;
+      java.util.Collection<java.util.List<?>> sans = leaf.getSubjectAlternativeNames();
+      if (sans != null) for (java.util.List<?> s : sans) {
+        String n = String.valueOf(s.get(1)).toLowerCase();
+        if (n.equals(host) || (n.startsWith("*.") && host.endsWith(n.substring(1)) && host.indexOf('.') == host.length() - n.length() + 1)) name = true;
+      }
+      note("ssl-fixed", name + " " + chain.size());
+      return name;
+    } catch (Exception x) { note("ssl-check", x.toString()); return false; }
   }
 
   // ماذا يردّ موقع مدرستي على طلب عادي من التطبيق (بلا المتصفح الداخلي): الحالة والتحويل ونوع المحتوى وبدايته
