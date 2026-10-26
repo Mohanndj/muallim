@@ -520,3 +520,5 @@ input[hidden] { display: none !important; }
 a.wa-btn, a.link { text-decoration: none; }
 .md-open { margin: 2px 0 6px; }
 .md-link { margin: -6px 4px 6px; }
+.md-hint { background: var(--bg); border-radius: 14px; padding: 8px 12px; margin: 4px 0 10px; font-size: .9rem; }
+.md-hint summary { cursor: pointer; color: var(--blue); font-weight: 600; }

@@ -12,14 +12,23 @@ const mdBookmark = () => `javascript:${encodeURIComponent(`(function(){var s=doc
 // ---- في التطبيق: نسخ التحضير للتعبئة، وتجهيز الزر مرة واحدة ----
 // منصة مدرستي تُفتح في تطبيق كروم نفسه (لا في نافذة التطبيق المصغرة) حتى يعمل فيها زر «تعبئة»
 const MD_SITE = 'schools.madrasati.sa';
-const MD_OPEN = () => (/Android/i.test(navigator.userAgent) ? `intent://${MD_SITE}/#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(`https://${MD_SITE}/`)};end` : `https://${MD_SITE}/`);
+// بلا «رابط بديل» ولا نافذة جديدة: متصفح سامسونج كان يفتح الرابط البديل في نفسه بدل كروم
+const MD_ANDROID = /Android/i.test(navigator.userAgent);
+const MD_OPEN = () => (MD_ANDROID ? `intent://${MD_SITE}/#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.android.chrome;end` : `https://${MD_SITE}/`);
+const mdLink = (cls, label) => `<a class="${cls}" href="${MD_OPEN()}"${MD_ANDROID ? '' : ' target="_blank" rel="noopener"'}>${ic('school')} ${label}</a>`;
+// التطبيق يعمل داخل متصفح سامسونج: كروم هو الذي فيه زر «تعبئة»
+const MD_SAMSUNG = /SamsungBrowser/i.test(navigator.userAgent);
+const mdSamsungHint = () => `<details class="md-hint"${MD_SAMSUNG ? ' open' : ''}><summary>تُفتح في متصفح سامسونج بدل كروم؟</summary>
+  <ol class="md-steps"><li>افتح <b>الإعدادات</b> في الجوال، ثم <b>التطبيقات</b>، ثم <b>اختيار التطبيقات الافتراضية</b>، ثم <b>تطبيق المتصفح</b>، واختر <b>Chrome</b>.</li>
+  <li>وأفضل من ذلك: افتح رابط «مساعد المعلم» في كروم (mohanndj.github.io/muallim)، ومن النقاط الثلاث ⋮ اختر «إضافة إلى الشاشة الرئيسية»، واستعمل هذه الأيقونة بدل القديمة. بياناتك تنتقل بـ«الإعدادات ← احفظ نسخة» ثم «استرجع نسخة» في الجديدة.</li></ol></details>`;
 Acts['md-fill'] = async () => {
   // الزر يُجهَّز أولاً (نسخه يستبدل ما في الحافظة)، ثم يُنسخ التحضير
   if (!T.mdReady) { Acts['md-setup'](); return; }
   const l = lesOf(UI.les);
   try { await navigator.clipboard.writeText(`${MD_MARK}${JSON.stringify({ t: l.title, f: l.f || {} })}`); } catch { toast('تعذّر النسخ'); return; }
   openSheet(`<h3>${ic('check')} نُسخ تحضير «${esc(l.title)}»</h3>
-    <a class="wa-btn wide md-open" href="${MD_OPEN()}" target="_blank" rel="noopener">${ic('school')} افتح منصة مدرستي في كروم</a>
+    ${mdLink('wa-btn wide md-open', 'افتح منصة مدرستي في كروم')}
+    ${mdSamsungHint()}
     <ol class="md-steps"><li>في مدرستي: افتح الجدول الدراسي، ثم الحصة، ثم «إعداد الدرس».</li><li>اضغط شريط العنوان أعلى الصفحة، واكتب: <b>تعبئة</b></li><li>اختر من القائمة «تعبئة» (عليها علامة النجمة): يضغط «التالي»، ويؤشّر الأهداف والمحتوى الرقمي والاستراتيجيات والوسائل، ويكتب مهارات التفكير وإغلاق الدرس وتعليمات المعلم.</li><li>أضف واجباً أو نشاطاً (المنصة تشترطه)، وراجع، ثم «حفظ وإنهاء».</li></ol>
     <button type="button" class="link" data-act="md-setup">${ic('gear')} جهّز زر «تعبئة» من جديد</button>`);
 };
