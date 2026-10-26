@@ -1,8 +1,8 @@
 // Offline support for «مساعد المعلم»: the app's files network first (the cache when there is no
 // connection), and the fonts from the cache once fetched.
-const VERSION = 10;
+const VERSION = 11;
 const CACHE = `muallim-v${VERSION}`;
-const ASSETS = ['./', './index.html', './style.css', './fa.js', './core.js', './app.js', './tools.js', './student.js', './portfolio.js', './exams.js', './prep.js', './mdfill.js',
+const ASSETS = ['./', './index.html', './style.css', './fa.js', './core.js', './app.js', './tools.js', './student.js', './portfolio.js', './exams.js', './prep.js', './mdpage.js', './mdfill.js',
   './xlsx-read.js', './xlsx.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
