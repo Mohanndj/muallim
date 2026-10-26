@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 8;
+const APP_VERSION = 9;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -126,13 +126,13 @@ const waLink = (phone, text) => `https://wa.me/${phone || ''}?text=${encodeURICo
 
 // ---- الإطار: العنوان يحدد الصفحة، وزر الرجوع في أندرويد يرجع خطوة ----
 const Views = {};
-let UI = { view: 'home', cls: '', tab: 'follow', std: '', ex: '', exCls: '', q: '', date: today() };
+let UI = { view: 'home', cls: '', tab: 'follow', std: '', ex: '', exCls: '', les: '', q: '', date: today() };
 let curHash = '';
 function route() {
   const h = location.hash.slice(1);
   const m = h.match(/^c\/([^/]+)(?:\/(\w+))?$/);
-  const p = h.match(/^port(?:\/(\w+))?$/), x = h.match(/^exams(?:\/(\w+))?(?:\/(\w+))?$/);
-  if (m && clsOf(m[1])) { UI.view = 'class'; UI.cls = m[1]; UI.tab = m[2] || 'follow'; } else if (p) { UI.view = 'port'; UI.std = p[1] || ''; } else if (x) { UI.view = 'exams'; UI.ex = x[1] || ''; UI.exCls = x[2] || ''; } else if (h === 'settings') UI.view = 'settings'; else UI.view = 'home';
+  const p = h.match(/^port(?:\/(\w+))?$/), x = h.match(/^exams(?:\/(\w+))?(?:\/(\w+))?$/), pr = h.match(/^prep(?:\/(\w+))?$/);
+  if (m && clsOf(m[1])) { UI.view = 'class'; UI.cls = m[1]; UI.tab = m[2] || 'follow'; } else if (p) { UI.view = 'port'; UI.std = p[1] || ''; } else if (x) { UI.view = 'exams'; UI.ex = x[1] || ''; UI.exCls = x[2] || ''; } else if (pr) { UI.view = 'prep'; UI.les = pr[1] || ''; } else if (h === 'settings') UI.view = 'settings'; else UI.view = 'home';
   curHash = location.hash;
 }
 function go(hash, replace = false) {
@@ -153,11 +153,11 @@ function render() {
   window.scrollTo(0, y);
   if (keep && $(keep[0])) { $(keep[0]).focus({ preventScroll: true }); try { $(keep[0]).setSelectionRange(keep[1], keep[1]); } catch { /* fine */ } }
 }
-// شريط الأسفل العائم: في الرئيسية الفصول والاختبارات وملف الإنجاز والإعدادات، وداخل الفصل أقسامه الأربعة
+// شريط الأسفل العائم: في الرئيسية الفصول والتحضير والاختبارات وملف الإنجاز والإعدادات، وداخل الفصل أقسامه الأربعة
 function dockHTML() {
   const items = UI.view === 'class'
     ? [['follow', 'المتابعة', 'follow'], ['att', 'حاضر', 'hand'], ['yw', 'أعمال السنة', 'doc'], ['tools', 'الأدوات الخاصة', 'tools']].map(([k, n, i]) => [`#c/${UI.cls}/${k}`, n, i, UI.tab === k])
-    : [['#home', 'الفصول', 'home', UI.view === 'home'], ['#exams', 'الاختبارات', 'file-pen', UI.view === 'exams'], ['#port', 'ملف الإنجاز', 'folder-open', UI.view === 'port'], ['#settings', 'الإعدادات', 'gear', UI.view === 'settings']];
+    : [['#home', 'الفصول', 'home', UI.view === 'home'], ['#prep', 'التحضير', 'calendar-check', UI.view === 'prep'], ['#exams', 'الاختبارات', 'file-pen', UI.view === 'exams'], ['#port', 'ملف الإنجاز', 'folder-open', UI.view === 'port'], ['#settings', 'الإعدادات', 'gear', UI.view === 'settings']];
   return `<nav class="dock">${items.map(([h, n, i, on]) => `<button type="button" class="${on ? 'on' : ''}" data-act="dock" data-h="${h}"><span>${ic(i)}</span>${n}</button>`).join('')}</nav>`;
 }
 window.addEventListener('popstate', () => {

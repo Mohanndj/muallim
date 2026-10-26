@@ -70,6 +70,11 @@ function autoEv(k) {
     add('خطط إثرائية', plans.filter((p) => p.type === 'إثرائية').length || '');
     add('شهادات تقدير للطلاب', allOf('honors').length || '');
     add('إشعارات ضعف لمتابعة المتعثرين', allOf('weak').length || '');
+  } else if (k === 'plan') {
+    const L = Array.isArray(T.lessons) ? T.lessons : [];
+    add('دروس المنهج في خطتك', L.length ? `${L.length} درساً${L.some((l) => l.week) ? ` موزعة على ${new Set(L.map((l) => l.week).filter(Boolean)).size} أسبوعاً` : ''}` : '');
+    add('دروس محضّرة', L.filter(lesFilled).length || '');
+    add('دروس مُنفّذة في الفصول', L.reduce((n, l) => n + Object.keys(l.taught || {}).length, 0) || '');
   } else if (k === 'tech') {
     add('تقييمات سجّلتها بالتطبيق', T.beh.length || '');
     add('أدوات الفصل الرقمية', countsLine(toolCount(['timer', 'calm', 'minute', 'pick', 'secret']).map(([n, c]) => [n, `${c} مرة`])));
