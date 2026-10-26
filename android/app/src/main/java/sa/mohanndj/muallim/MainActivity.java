@@ -87,7 +87,10 @@ public class MainActivity extends Activity {
     s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
     WebView.setWebContentsDebuggingEnabled(true);
     web.addJavascriptInterface(new Rec(), "MlmRec");
-    new Thread(new Runnable() { public void run() { learnJs = get(LEARN); note("learn", learnJs == null ? "not loaded" : "loaded " + learnJs.length()); } }).start();
+    new Thread(new Runnable() { public void run() { learnJs = get(LEARN); note("learn", learnJs == null ? "not loaded" : "loaded " + learnJs.length()); probe(); } }).start();
+    web.setDownloadListener(new android.webkit.DownloadListener() {
+      public void onDownloadStart(String url, String ua, String cd, String mime, long len) { note("download", url + " " + mime + " " + cd + " " + len); }
+    });
     s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replace("Version/4.0 ", ""));
     // بعض المواقع الحكومية ترفض ما يأتي من داخل التطبيقات (رأس X-Requested-With باسم التطبيق): لا يُرسل
     if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) WebSettingsCompat.setRequestedWithHeaderOriginAllowList(s, Collections.<String>emptySet());
@@ -155,6 +158,8 @@ public class MainActivity extends Activity {
       @Override
       public void onPageCommitVisible(WebView v, String url) { note("visible", url); }
       @Override
+      public boolean onRenderProcessGone(WebView v, android.webkit.RenderProcessGoneDetail d) { note("render-gone", String.valueOf(d.didCrash())); return true; }
+      @Override
       public void onPageFinished(WebView v, String url) {
         note("finish", url);
         if (learnJs != null) v.evaluateJavascript(learnJs, null);
@@ -212,6 +217,26 @@ public class MainActivity extends Activity {
     }
     if (first || web.getUrl() == null) web.loadUrl(HOME);
   }
+
+  // ماذا يردّ موقع مدرستي على طلب عادي من التطبيق (بلا المتصفح الداخلي): الحالة والتحويل ونوع المحتوى وبدايته
+  void probe() {
+    try {
+      HttpURLConnection c = (HttpURLConnection) new URL(HOME).openConnection();
+      c.setInstanceFollowRedirects(false);
+      c.setConnectTimeout(8000);
+      c.setReadTimeout(8000);
+      c.setRequestProperty("User-Agent", web.getSettings().getUserAgentString());
+      int code = c.getResponseCode();
+      StringBuilder h = new StringBuilder("status " + code);
+      for (String k : new String[] { "Location", "Content-Type", "Content-Length", "Server", "Content-Security-Policy", "X-Frame-Options" }) { String v = c.getHeaderField(k); if (v != null) h.append(" | ").append(k).append(": ").append(v.length() > 200 ? v.substring(0, 200) : v); }
+      note("probe", h.toString());
+      InputStream in = code < 400 ? c.getInputStream() : c.getErrorStream();
+      if (in != null) { String body = read(in); note("body", body.length() + " " + body.replaceAll("\\s+", " ").substring(0, Math.min(600, body.length()))); }
+    } catch (Exception e) { note("probe-fail", e.toString()); }
+  }
+
+  @Override
+  public void onTrimMemory(int l) { super.onTrimMemory(l); }
 
   void copyReport() {
     StringBuilder sb = new StringBuilder("تقرير تطبيق تحضير مدرستي\n");
