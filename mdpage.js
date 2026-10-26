@@ -15,7 +15,7 @@
     if (old) old.remove();
     var box = document.createElement('div');
     box.id = 'mlm-box';
-    box.setAttribute('style', 'position:fixed;left:8px;right:8px;bottom:8px;z-index:2147483647;background:#fff;color:#111;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.35);padding:14px;font:15px/1.7 Tahoma,sans-serif;direction:rtl;text-align:right;max-height:65vh;overflow:auto');
+    box.setAttribute('style', 'position:fixed;left:8px;right:8px;top:8px;z-index:2147483647;background:#fff;color:#111;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.35);padding:14px;font:15px/1.7 Tahoma,sans-serif;direction:rtl;text-align:right;max-height:65vh;overflow:auto');
     document.body.appendChild(box);
     var btn = 'border:0;border-radius:12px;padding:8px 14px;margin:4px 0 0 6px;font:inherit;';
     function show(html) {
@@ -27,7 +27,7 @@
     function heads() {
       var out = [];
       document.querySelectorAll('h1,h2,h3,h4,h5,h6,label,span,div,p,b,strong,legend,mat-label').forEach(function (el) {
-        if (el.closest('#mlm-box') || el.querySelector('input,textarea,[role=checkbox]')) return;
+        if (el.closest('#mlm-box') || el.querySelector('input,textarea,[role=checkbox]') || !el.getClientRects().length) return;
         var t = norm(el.textContent);
         if (!t || t.length > 90) return;
         SECS.forEach(function (s) { if (s[1].some(function (n) { return t.indexOf(norm(n)) >= 0; })) out.push({ k: s[0], el: el }); });
@@ -45,9 +45,15 @@
         if (el.matches('[role=checkbox]') && el.querySelector('input[type=checkbox]')) return;
         out.push(el);
       });
+      if (out.length) return out;
+      // مربعات مرسومة بلا خانة حقيقية: عنصر صنفه فيه checkbox ولا يحوي مثله
+      document.querySelectorAll('[class*=checkbox], [class*=Checkbox], [class*=check-box]').forEach(function (el) {
+        if (el.closest('#mlm-box') || !el.getClientRects().length || el.querySelector('[class*=checkbox], [class*=Checkbox], [class*=check-box]')) return;
+        out.push(el);
+      });
       return out;
     }
-    var isOn = function (el) { return el.checked === true || el.getAttribute('aria-checked') === 'true'; };
+    var isOn = function (el) { return el.checked === true || el.getAttribute('aria-checked') === 'true' || (el.tagName !== 'INPUT' && /(^|[\s_-])(checked|active|selected|highlight)\b/i.test(el.className && typeof el.className === 'string' ? el.className : '')); };
     function textOf(el) {
       var l = el.closest('label') || (el.id && document.querySelector('label[for="' + el.id + '"]'));
       if (l && norm(l.textContent)) return norm(l.textContent);
@@ -85,11 +91,11 @@
       var has = function (k) { return H.some(function (h) { return h.k === k; }); };
       // الخطوة الأولى: «التالي» ثم انتظار الخطوة الثانية
       if (!has('goals') && !has('strat')) {
-        var next = [].slice.call(document.querySelectorAll('button, a, [role=button]')).filter(function (b) { return norm(b.textContent) === 'التالي' && visible(b) && !b.disabled; })[0];
+        var next = [].slice.call(document.querySelectorAll('button, a, [role=button], input[type=button], input[type=submit]')).filter(function (b) { var t = norm(b.textContent || b.value); return t.indexOf('التالي') >= 0 && t.length < 14 && visible(b) && !b.disabled; })[0];
         if (!next) { report('لم أجد في هذه الصفحة خانات التحضير. افتح «إعداد الدرس» للحصة ثم اضغط «تعبئة».'); return; }
         show('<p>أنتقل إلى الخطوة الثانية…</p>');
         next.click();
-        var n = 0, iv = setInterval(function () { n++; var H2 = heads(); if (H2.some(function (h) { return h.k === 'goals' || h.k === 'strat'; }) && boxes().length) { clearInterval(iv); setTimeout(function () { fill(data); }, 500); } else if (n > 40) { clearInterval(iv); report('لم تظهر الخطوة الثانية. اضغط «التالي» بنفسك ثم «تعبئة» مرة أخرى.'); } }, 250);
+        var n = 0, iv = setInterval(function () { n++; var H2 = heads(); if (H2.some(function (h) { return h.k === 'goals' || h.k === 'strat'; })) { clearInterval(iv); setTimeout(function () { fill(data); }, 1200); } else if (n > 80) { clearInterval(iv); report('لم تظهر الخطوة الثانية. اضغط «التالي» بنفسك ثم «تعبئة» مرة أخرى.'); } }, 250);
         return;
       }
       var f = data.f || {}, got = { goals: 0, digital: 0, strat: [], tools: [] }, wants = { strat: list(f.strat), tools: list(f.tools) };
@@ -116,6 +122,7 @@
       if (got.strat.length) lines.push('✓ الاستراتيجيات: ' + got.strat.join('، '));
       if (got.tools.length) lines.push('✓ الوسائل: ' + got.tools.join('، '));
       if (wrote.length) lines.push('✓ كتبت: ' + wrote.join('، '));
+      lines.push('<small style="color:#888">وجدت في الصفحة: ' + H.length + ' أقسام، ' + boxes().length + ' مربعات</small>');
       report('<p><b>«' + (data.t || '') + '»</b></p><p style="color:#23843f">' + lines.join('<br>') + '</p>' + (miss.length ? '<p style="color:#c0392b">لم أجد: ' + miss.join('، ') + '</p>' : '') +
         '<p><b>بقي عليك:</b> أضف واجباً أو نشاطاً من أزرار المنصة (تشترط واحداً على الأقل)، ثم راجع واضغط «حفظ وإنهاء».</p>' +
         (f.hw ? '<button id="mlm-hw" style="' + btn + 'background:#1a8f5c;color:#fff">انسخ نص الواجب</button>' : ''), miss.length);
