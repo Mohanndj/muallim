@@ -23,6 +23,10 @@ import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.webkit.JavascriptInterface;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import java.util.ArrayList;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -38,6 +42,15 @@ public class MainActivity extends Activity {
   Button fill;
   ProgressBar bar;
   TextView msg;
+  // «التعلّم»: وصف صفحات المنصة وما يُضغط فيها (mdlearn.js)، يُنسخ بالضغط المطوّل على الزر
+  static final String LEARN = "https://mohanndj.github.io/muallim/mdlearn.js";
+  final ArrayList<String> rec = new ArrayList<>();
+  String learnJs;
+
+  class Rec {
+    @JavascriptInterface
+    public void log(String s) { synchronized (rec) { rec.add(s.length() > 6000 ? s.substring(0, 6000) : s); while (rec.size() > 300) rec.remove(0); } }
+  }
   String lesson;
   SharedPreferences prefs;
 
@@ -60,6 +73,8 @@ public class MainActivity extends Activity {
     s.setJavaScriptCanOpenWindowsAutomatically(true);
     s.setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
     WebView.setWebContentsDebuggingEnabled(true);
+    web.addJavascriptInterface(new Rec(), "MlmRec");
+    new Thread(new Runnable() { public void run() { learnJs = get(LEARN); } }).start();
     s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replace("Version/4.0 ", ""));
     CookieManager.getInstance().setAcceptCookie(true);
     CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
@@ -104,6 +119,7 @@ public class MainActivity extends Activity {
       }
       @Override
       public void onPageFinished(WebView v, String url) {
+        if (learnJs != null) v.evaluateJavascript(learnJs, null);
         // صفحة بيضاء بعد التحميل: يُقال ذلك بدل السكوت
         v.evaluateJavascript("(document.body&&document.body.innerText||'').trim().length", new android.webkit.ValueCallback<String>() {
           public void onReceiveValue(String n) { if ("0".equals(n)) show("الصفحة فارغة: " + url + "\nاضغط هنا لإعادة التحميل"); }
@@ -134,6 +150,7 @@ public class MainActivity extends Activity {
     lp.bottomMargin = 40;
     root.addView(fill, lp);
     fill.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { runFill(); } });
+    fill.setOnLongClickListener(new View.OnLongClickListener() { public boolean onLongClick(View v) { copyReport(); return true; } });
     setContentView(root);
 
     if (b != null) web.restoreState(b);
@@ -156,6 +173,14 @@ public class MainActivity extends Activity {
     if (first || web.getUrl() == null) web.loadUrl(HOME);
   }
 
+  void copyReport() {
+    StringBuilder sb = new StringBuilder("تقرير تطبيق تحضير مدرستي\n");
+    synchronized (rec) { for (String s : rec) sb.append(s).append('\n'); }
+    if (rec.isEmpty()) sb.append("لا شيء بعد. الرابط: ").append(web.getUrl());
+    ((ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("report", sb.toString()));
+    Toast.makeText(this, "نُسخ التقرير (" + rec.size() + "). الصقه في المحادثة", Toast.LENGTH_LONG).show();
+  }
+
   void show(String t) { msg.setText(t); msg.setVisibility(View.VISIBLE); }
 
   void runFill() {
@@ -169,9 +194,11 @@ public class MainActivity extends Activity {
     } }).start();
   }
 
-  String download() {
+  String download() { return get(FILLER); }
+
+  String get(String url) {
     try {
-      HttpURLConnection c = (HttpURLConnection) new URL(FILLER + "?t=" + System.currentTimeMillis()).openConnection();
+      HttpURLConnection c = (HttpURLConnection) new URL(url + "?t=" + System.currentTimeMillis()).openConnection();
       c.setConnectTimeout(6000);
       c.setReadTimeout(6000);
       if (c.getResponseCode() != 200) return null;
