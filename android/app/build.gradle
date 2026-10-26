@@ -15,4 +15,6 @@ android {
   // يحتاج حذف القديم قبل تثبيته؛ لذلك لا يُعاد البناء إلا إذا تغيّر التطبيق نفسه (التعبئة تأتي من الموقع)
   buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }
   compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+  buildFeatures { buildConfig true }
 }
+dependencies { implementation 'androidx.webkit:webkit:1.11.0' }

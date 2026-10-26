@@ -27,6 +27,11 @@ import android.webkit.JavascriptInterface;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import java.util.ArrayList;
+import java.util.Collections;
+import android.os.Build;
+import android.webkit.ConsoleMessage;
+import androidx.webkit.WebSettingsCompat;
+import androidx.webkit.WebViewFeature;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -46,6 +51,14 @@ public class MainActivity extends Activity {
   static final String LEARN = "https://mohanndj.github.io/muallim/mdlearn.js";
   final ArrayList<String> rec = new ArrayList<>();
   String learnJs;
+  String lastErr;
+
+  // ما يحدث في التطبيق نفسه (فتح الصفحات وأخطاؤها) يدخل في التقرير كذلك
+  void note(String t, String v) {
+    String u = v == null ? "" : v;
+    if (u.length() > 300) u = u.substring(0, 300);
+    synchronized (rec) { rec.add("{\"t\":\"" + t + "\",\"v\":" + org.json.JSONObject.quote(u) + "}"); while (rec.size() > 300) rec.remove(0); }
+  }
 
   class Rec {
     @JavascriptInterface
@@ -76,6 +89,8 @@ public class MainActivity extends Activity {
     web.addJavascriptInterface(new Rec(), "MlmRec");
     new Thread(new Runnable() { public void run() { learnJs = get(LEARN); } }).start();
     s.setUserAgentString(s.getUserAgentString().replace("; wv", "").replace("Version/4.0 ", ""));
+    // بعض المواقع الحكومية ترفض ما يأتي من داخل التطبيقات (رأس X-Requested-With باسم التطبيق): لا يُرسل
+    if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) WebSettingsCompat.setRequestedWithHeaderOriginAllowList(s, Collections.<String>emptySet());
     CookieManager.getInstance().setAcceptCookie(true);
     CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
     // شريط تحميل أعلى الصفحة، وسطر يبيّن الخطأ إن لم تفتح الصفحة (كانت تبقى بيضاء بلا تفسير)
@@ -91,6 +106,11 @@ public class MainActivity extends Activity {
     root.addView(msg, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
     msg.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { msg.setVisibility(View.GONE); web.reload(); } });
     web.setWebChromeClient(new WebChromeClient() {
+      @Override
+      public boolean onConsoleMessage(ConsoleMessage c) {
+        if (c.messageLevel() == ConsoleMessage.MessageLevel.ERROR) { note("console", c.message() + " @" + c.sourceId() + ":" + c.lineNumber()); lastErr = c.message(); }
+        return false;
+      }
       @Override
       public void onProgressChanged(WebView v, int p) { bar.setProgress(p); bar.setVisibility(p < 100 ? View.VISIBLE : View.GONE); }
       @Override
@@ -118,19 +138,24 @@ public class MainActivity extends Activity {
         return true;
       }
       @Override
+      public void onPageStarted(WebView v, String url, android.graphics.Bitmap f) { note("start", url); }
+      @Override
       public void onPageFinished(WebView v, String url) {
+        note("finish", url);
         if (learnJs != null) v.evaluateJavascript(learnJs, null);
         // صفحة بيضاء بعد التحميل: يُقال ذلك بدل السكوت
         v.evaluateJavascript("(document.body&&document.body.innerText||'').trim().length", new android.webkit.ValueCallback<String>() {
-          public void onReceiveValue(String n) { if ("0".equals(n)) show("الصفحة فارغة: " + url + "\nاضغط هنا لإعادة التحميل"); }
+          public void onReceiveValue(String n) { note("textlen", n); if ("0".equals(n)) show("الصفحة فارغة: " + url + (lastErr != null ? "\nخطأ: " + lastErr : "") + "\nاضغط هنا لإعادة التحميل، أو اضغط مطوّلاً على الزر الأخضر وأرسل التقرير"); }
         });
       }
       @Override
       public void onReceivedError(WebView v, WebResourceRequest r, WebResourceError e) {
+        note("error", r.getUrl() + " " + e.getErrorCode() + " " + e.getDescription());
         if (r.isForMainFrame()) show("لم تفتح الصفحة (" + e.getDescription() + "): " + r.getUrl() + "\nاضغط هنا لإعادة المحاولة");
       }
       @Override
       public void onReceivedHttpError(WebView v, WebResourceRequest r, WebResourceResponse e) {
+        note("http", r.getUrl() + " " + e.getStatusCode());
         if (r.isForMainFrame()) show("ردّ الموقع بخطأ " + e.getStatusCode() + ": " + r.getUrl() + "\nاضغط هنا لإعادة المحاولة");
       }
     });
@@ -175,6 +200,9 @@ public class MainActivity extends Activity {
 
   void copyReport() {
     StringBuilder sb = new StringBuilder("تقرير تطبيق تحضير مدرستي\n");
+    sb.append("app ").append(BuildConfig.VERSION_NAME).append(" | android ").append(Build.VERSION.RELEASE).append(" | ").append(web.getSettings().getUserAgentString()).append('\n');
+    if (Build.VERSION.SDK_INT >= 26 && WebView.getCurrentWebViewPackage() != null) sb.append("webview ").append(WebView.getCurrentWebViewPackage().packageName).append(' ').append(WebView.getCurrentWebViewPackage().versionName).append('\n');
+    sb.append("url ").append(web.getUrl()).append('\n');
     synchronized (rec) { for (String s : rec) sb.append(s).append('\n'); }
     if (rec.isEmpty()) sb.append("لا شيء بعد. الرابط: ").append(web.getUrl());
     ((ClipboardManager) getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("report", sb.toString()));
