@@ -318,7 +318,7 @@ Acts.xlsx = () => {
 
 // ---- الإعدادات ----
 Views.settings = () => `<header class="home-h"><div><h1>الإعدادات</h1></div></header>
-  <a class="wa-btn wide md-apk" href="${MD_APK}">${ic('download')} ثبّت تطبيق «تحضير مدرستي»</a>
+  <button type="button" class="wa-btn wide md-apk" data-act="md-apk">${ic('download')} ثبّت تطبيق «تحضير مدرستي»</button>
   <form class="card" data-submit="set-save"><label>اسمك (في رسائل أولياء الأمور)<input name="teacher" value="${esc(T.settings.teacher)}" placeholder="مثل: أ. محمد"></label>
     <label>المادة<input name="subject" value="${esc(T.settings.subject)}"></label>
     <label>المدرسة (تظهر في الأوراق المطبوعة)<input name="school" value="${esc(T.settings.school || '')}"></label><button class="blue-btn wide">احفظ</button></form>

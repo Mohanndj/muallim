@@ -15,7 +15,19 @@ const MD_SITE = 'schools.madrasati.sa';
 // بلا «رابط بديل» ولا نافذة جديدة: متصفح سامسونج كان يفتح الرابط البديل في نفسه بدل كروم
 const MD_ANDROID = /Android/i.test(navigator.userAgent);
 // في أندرويد: تطبيق «تحضير مدرستي» (android/) يفتح المنصة داخله ومعه تحضير الدرس؛ وإن لم يكن مثبّتاً نُزّل
-const MD_APK = 'https://github.com/Mohanndj/muallim/releases/download/app/muallim-madrasati.apk';
+// نسخة من ملف التطبيق على موقع «مساعد المعلم» نفسه: تُنزَّل كما تُنزَّل النسخة الاحتياطية
+// (الروابط الخارجية تفتح في متصفح مصغّر لا يحفظ الملف). تُحدَّث يدوياً من الإصدار «app» إن أُعيد بناء التطبيق.
+const MD_APK = 'https://mohanndj.github.io/muallim/muallim-madrasati.apk';
+Acts['md-apk'] = async (el) => {
+  el.disabled = true;
+  try {
+    const r = await fetch(`muallim-madrasati.apk?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) throw new Error(r.status);
+    download(new Blob([await r.arrayBuffer()], { type: 'application/vnd.android.package-archive' }), 'muallim-madrasati.apk');
+    toast('نزل التطبيق: افتحه من الإشعار وثبّته');
+  } catch { toast('تعذّر التنزيل، تأكد من الإنترنت'); }
+  el.disabled = false;
+};
 const mdIntent = (l) => `intent://fill#Intent;scheme=muallimfill;package=sa.mohanndj.muallim;${l ? `S.lesson=${encodeURIComponent(JSON.stringify({ t: l.title, f: l.f || {} }))};` : ''}S.browser_fallback_url=${encodeURIComponent(MD_APK)};end`;
 const MD_OPEN = () => (MD_ANDROID ? mdIntent(null) : `https://${MD_SITE}/`);
 const mdLink = (cls, label) => `<a class="${cls}" href="${MD_OPEN()}"${MD_ANDROID ? '' : ' target="_blank" rel="noopener"'}>${ic('school')} ${label}</a>`;
