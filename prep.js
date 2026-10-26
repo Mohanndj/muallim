@@ -177,7 +177,7 @@ function viewLesson(l) {
     ${T.classes.length ? `<div class="card"><h3>${ic('check')} دُرّس في</h3><div class="chips">${T.classes.map((c) => `<button type="button" class="chip${(l.taught || {})[c.id] ? ' on' : ''}" data-act="pr-taught" data-c="${c.id}">${(l.taught || {})[c.id] ? `${ic('check')} ` : ''}${esc(c.name)}</button>`).join('')}</div></div>` : ''}
     <div class="card pr-ai"><div class="row2 tight"><button type="button" class="blue-btn" data-act="pr-ask" data-id="${l.id}">${ic('paper-plane')} اطلب التحضير من Claude</button><button type="button" class="ghost-btn" data-act="pr-paste">${ic('clipboard')} الصق التحضير</button></div>
       <p class="hint">ينسخ الطلب ويفتح Claude، ثم انسخ ما يكتبه وارجع واضغط «الصق التحضير»، فتمتلئ الخانات.</p></div>
-    ${lesFilled(l) ? `<button type="button" class="wa-bar pr-all" data-act="pr-copy-all">${ic('clipboard')} انسخ التحضير كاملاً</button>` : ''}
+    ${lesFilled(l) ? `<div class="row2 pr-all"><button type="button" class="wa-btn" data-act="md-fill">${ic('paper-plane')} عبّئ في مدرستي</button><button type="button" class="ghost-btn" data-act="pr-copy-all">${ic('clipboard')} انسخه كاملاً</button></div>` : ''}
     ${LF.map(([k, n]) => `<div class="card pr-f"><div class="pf-h"><h3>${n}</h3><button type="button" class="ghost-btn sm" data-act="pr-copy" data-k="${k}">${ic('clipboard')} انسخ</button></div>
       <textarea id="prf-${k}" data-input="pr-f" data-k="${k}" rows="${Math.min(8, Math.max(2, ((l.f || {})[k] || '').split('\n').length + 1))}" ${k === 'links' ? 'dir="ltr"' : ''}>${esc((l.f || {})[k] || '')}</textarea></div>`).join('')}`;
 }

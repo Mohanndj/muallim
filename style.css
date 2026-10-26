@@ -509,3 +509,6 @@ input[hidden] { display: none !important; }
 .pr-all { margin-bottom: 12px; }
 .pr-f { padding: 12px 14px; }
 .pr-f textarea { margin-top: 4px; font-size: .95rem; line-height: 1.7; }
+.pr-all { margin: 0 0 12px; }
+.md-steps { padding-inline-start: 22px; margin: 6px 0 12px; display: grid; gap: 6px; }
+.md-steps li { line-height: 1.6; }
