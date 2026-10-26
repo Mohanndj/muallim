@@ -144,7 +144,9 @@
       show('<p>لم أجد تحضيراً منسوخاً. في «مساعد المعلم» افتح الدرس واضغط «عبّئ في مدرستي»، ثم ارجع هنا واضغط «تعبئة». أو الصقه هنا:</p><textarea id="mlm-t" style="width:100%;height:70px;border:1px solid #ccc;border-radius:10px;padding:6px"></textarea><button id="mlm-go" style="' + btn + 'background:#1a8f5c;color:#fff">عبّئ</button>');
       document.getElementById('mlm-go').onclick = function () { start(document.getElementById('mlm-t').value); };
     }
-    if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { start(t || ''); }, ask);
+    // داخل تطبيق «تحضير مدرستي» يصل التحضير مباشرة (window.__mlmData) بلا حافظة
+    if (window.__mlmData) { var d = window.__mlmData; window.__mlmData = null; try { fill(d); } catch (e) { report('تعذّرت التعبئة: ' + e.message); } }
+    else if (navigator.clipboard && navigator.clipboard.readText) navigator.clipboard.readText().then(function (t) { start(t || ''); }, ask);
     else ask();
   }
   if (typeof Acts === 'undefined') mdFill(); else window.mdFillSrc = mdFill.toString();

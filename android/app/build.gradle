@@ -1,0 +1,18 @@
+plugins { id 'com.android.application' }
+// رقم البناء من GitHub Actions حتى يقبل الجوال كل نسخة جديدة تحديثاً للقديمة
+def run = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+android {
+  namespace 'sa.mohanndj.muallim'
+  compileSdk 34
+  defaultConfig {
+    applicationId 'sa.mohanndj.muallim'
+    minSdk 24
+    targetSdk 34
+    versionCode run
+    versionName "1.${run}"
+  }
+  // لا مفتاح توقيع في المستودع (عام): يُوقَّع بمفتاح التجربة الذي يصنعه جهاز البناء، فكل بناء جديد للتطبيق
+  // يحتاج حذف القديم قبل تثبيته؛ لذلك لا يُعاد البناء إلا إذا تغيّر التطبيق نفسه (التعبئة تأتي من الموقع)
+  buildTypes { release { minifyEnabled false; signingConfig signingConfigs.debug } }
+  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}
