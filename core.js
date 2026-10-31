@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 16;
+const APP_VERSION = 17;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -65,7 +65,7 @@ function normalize(d) {
   d = d && typeof d === 'object' ? d : {};
   const arr = (x) => (Array.isArray(x) ? x : []);
   const st = d.settings || {};
-  const evals = arr(d.evals).filter((e) => e && e.k && e.name).map((e) => ({ k: String(e.k), name: String(e.name), g: faName(e.g) ? e.g : 'check', c: String(e.c || '#5fcf80'), w: Number(e.w) || 0 }));
+  const evals = arr(d.evals).filter((e) => e && e.k && e.name).map((e) => ({ k: String(e.k), name: String(e.name), g: faName(e.g) ? e.g : 'check', c: String(e.c || '#5fcf80'), w: Number(e.w) || 0, ...(typeof e.y === 'string' ? { y: e.y } : {}) }));
   return {
     ...d,
     settings: { ...st, teacher: String(st.teacher || ''), subject: String(st.subject || 'الدراسات الإسلامية'), school: String(st.school || '') },
@@ -107,10 +107,27 @@ function setAtt(s, v, d = today()) {
   const day = (T.att[s.cls][d] = T.att[s.cls][d] || {});
   if (v === 'p') delete day[s.id]; else day[s.id] = v;
 }
+// ---- أثر السلوك على أعمال السنة (الإصدار ١٧): كل تقييم مربوط ببند (e.y، و'' لا يؤثر)، ودرجته تُضاف إلى البند أو تُنقص منه ----
+const EVAL_YW = { recite: 'act', hifz: 'act', midhifz: 'act', hw: 'hw', nohw: 'hw' };
+const evalYW = (e) => (typeof e.y === 'string' ? e.y : EVAL_YW[e.k] || 'part');
+const behOn = () => T.settings.behYW !== false;
+// مجموع ما أضافه السلوك إلى بند أو أنقصه منه
+const behYW = (sid, k) => (behOn() ? behOf(sid).reduce((n, b) => { const e = evalOf(b.icon); return n + (e && evalYW(e) === k ? b.w : 0); }, 0) : 0);
+const ywStart = (y) => (typeof y.start === 'number' ? y.start : y.max);
+// درجة البند النهائية: المرصود بيده (أو من الاختبارات)، وإلا درجة البداية إن كان للسلوك فيه أثر؛ ثم أثر السلوك، بين صفر والكاملة
+function ywMark(sid, k) {
+  const y = T.yw.find((x) => x.k === k);
+  if (!y) return null;
+  const v = (T.marksYW[sid] || {})[k], d = behYW(sid, k);
+  const base = typeof v === 'number' ? v : d ? ywStart(y) : null;
+  if (base === null) return null;
+  return Math.min(y.max, Math.max(0, Math.round((base + d) * 2) / 2));
+}
+const ywTotal = (sid) => T.yw.reduce((n, y) => n + (ywMark(sid, y.k) || 0), 0);
 // مستوى الفصل: متوسط درجات أعمال السنة المرصودة
 function classLevel(cid) {
   let got = 0, max = 0;
-  for (const s of studentsIn(cid)) for (const y of T.yw) { const v = (T.marksYW[s.id] || {})[y.k]; if (typeof v === 'number') { got += v; max += y.max; } }
+  for (const s of studentsIn(cid)) for (const y of T.yw) { const v = ywMark(s.id, y.k); if (typeof v === 'number') { got += v; max += y.max; } }
   return max ? Math.round((got / max) * 100) : 0;
 }
 
@@ -134,6 +151,7 @@ function route() {
   const p = h.match(/^port(?:\/(\w+))?$/), x = h.match(/^exams(?:\/(\w+))?(?:\/(\w+))?$/), pr = h.match(/^prep(?:\/(\w+))?$/);
   if (m && clsOf(m[1])) { UI.view = 'class'; UI.cls = m[1]; UI.tab = m[2] || 'follow'; } else if (p) { UI.view = 'port'; UI.std = p[1] || ''; } else if (x) { UI.view = 'exams'; UI.ex = x[1] || ''; UI.exCls = x[2] || ''; } else if (pr) { UI.view = 'prep'; UI.les = pr[1] || ''; } else if (h === 'settings') UI.view = 'settings'; else UI.view = 'home';
   curHash = location.hash;
+  UI.multi = null;
 }
 function go(hash, replace = false) {
   if (location.hash !== hash) history[replace ? 'replaceState' : 'pushState'](null, '', hash);

@@ -39,7 +39,7 @@ const countsLine = (pairs) => pairs.map(([n, c]) => `${n}: ${c}`).join(' | ');
 // مستوى الطالب في أعمال السنة (نسبة ما رُصد له)
 function ywPct(s) {
   let got = 0, max = 0;
-  for (const y of T.yw) { const v = (T.marksYW[s.id] || {})[y.k]; if (typeof v === 'number') { got += v; max += y.max; } }
+  for (const y of T.yw) { const v = ywMark(s.id, y.k); if (typeof v === 'number') { got += v; max += y.max; } }
   return max ? (got / max) * 100 : null;
 }
 function classAnalysis(c) {
@@ -93,7 +93,7 @@ function autoEv(k) {
     for (const a of T.classes.map(classAnalysis).filter((x) => x.rated)) add(a.c.name, `المتوسط ${a.avg}% | متقدم ${a.hi} | متوسط ${a.mid} | يحتاج دعماً ${a.lo}`);
     for (const x of Array.isArray(T.exams) ? T.exams : []) for (const c of T.classes) { const st = exStats(x, c.id); if (st.sc.length) add(`${x.title} (${c.name})`, `المتوسط ${fmtScore(Math.round(st.avg * 10) / 10)} من ${fmtScore(st.tot)} | نجح ${st.pass} من ${st.sc.length}`); }
   } else if (k === 'assess') {
-    for (const y of T.yw) { const n = T.students.filter((s) => typeof (T.marksYW[s.id] || {})[y.k] === 'number').length; add(`درجات ${y.name} المرصودة`, n ? `${n} طالباً` : ''); }
+    for (const y of T.yw) { const n = T.students.filter((s) => typeof ywMark(s.id, y.k) === 'number').length; add(`درجات ${y.name} المرصودة`, n ? `${n} طالباً` : ''); }
     add('تقويم يومي بالأيقونات', T.beh.length ? `${T.beh.length} تقييم` : '');
     const xs = Array.isArray(T.exams) ? T.exams : [];
     add('اختبارات أعددتها', xs.length ? `${xs.length} (${[...new Set(xs.flatMap((x) => x.qs.map((q) => ({ mc: 'اختيار', tf: 'صح وخطأ', text: 'مقالي' }[q.type]))))].join('، ')})` : '');
@@ -287,7 +287,7 @@ Acts['pf-analysis'] = () => {
     <table class="an"><tr><th>الفصل</th><th>الطلاب</th><th>رُصدت درجاتهم</th><th>المتوسط</th><th>متقدم (90% فأكثر)</th><th>متوسط (70 إلى 89%)</th><th>يحتاج دعماً (أقل من 70%)</th></tr>
       ${rows.map((a) => `<tr><td>${esc(a.c.name)}</td><td>${a.n}</td><td>${a.rated}</td><td>${a.rated ? `${a.avg}%` : '-'}</td><td>${a.hi}</td><td>${a.mid}</td><td>${a.lo}</td></tr>`).join('')}</table>
     ${rows.filter((a) => a.rated).map((a) => `<h2>${esc(a.c.name)}</h2><table class="an"><tr><th>الطالب</th>${T.yw.map((y) => `<th>${esc(y.name)} (${y.max})</th>`).join('')}<th>النسبة</th><th>المستوى</th></tr>
-      ${studentsIn(a.c.id).map((s) => { const m = T.marksYW[s.id] || {}, x = ywPct(s); return `<tr><td>${esc(s.name)}</td>${T.yw.map((y) => `<td>${m[y.k] ?? ''}</td>`).join('')}<td>${x === null ? '' : `${Math.round(x)}%`}</td><td>${x === null ? '' : lvl(x)}</td></tr>`; }).join('')}</table>
+      ${studentsIn(a.c.id).map((s) => { const x = ywPct(s); return `<tr><td>${esc(s.name)}</td>${T.yw.map((y) => `<td>${ywMark(s.id, y.k) ?? ''}</td>`).join('')}<td>${x === null ? '' : `${Math.round(x)}%`}</td><td>${x === null ? '' : lvl(x)}</td></tr>`; }).join('')}</table>
       ${a.lo ? `<p>الإجراء المقترح: خطط علاجية لمن يحتاجون دعماً (${a.lo})، وبرامج إثرائية للمتقدمين (${a.hi}).</p>` : ''}`).join('')}
     ${teacherSig()}`, '.an th,.an td{width:auto;text-align:center;font-size:10.5pt}.an td:first-child{text-align:right}h2{font-size:13pt;color:#1d5f3c;margin:6mm 0 1mm}');
 };

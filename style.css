@@ -523,3 +523,34 @@ a.wa-btn, a.link { text-decoration: none; }
 .md-hint { background: var(--bg); border-radius: 14px; padding: 8px 12px; margin: 4px 0 10px; font-size: .9rem; }
 .md-hint summary { cursor: pointer; color: var(--blue); font-weight: 600; }
 .md-apk { margin: 0 0 12px; }
+
+/* الإصدار ١٧: ألوان أوضح، وأثر السلوك على أعمال السنة، والرصد والتقييم الجماعيان */
+.cls-card { background: radial-gradient(110% 80% at 100% 0%, rgba(255, 255, 255, .16), transparent 55%), linear-gradient(150deg, var(--c1, #2f8456), var(--c2, #144a2e)); box-shadow: 0 6px 16px color-mix(in srgb, var(--c2, #144a2e) 35%, transparent); }
+.home-h h1, .cls-h h1 { background: linear-gradient(90deg, #1c1c1e, #3478f6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pill-blue { background: linear-gradient(135deg, #4a8cff, #2563eb); box-shadow: 0 2px 6px rgba(37, 99, 235, .25); }
+.pill-blue.neg { background: linear-gradient(135deg, #f26b84, #dc3557); box-shadow: 0 2px 6px rgba(220, 53, 87, .25); }
+.dock button.on span { background: linear-gradient(135deg, #e3edff, #d3e2ff); }
+.round.on { background: var(--blue); color: #fff; }
+.scard.sel { box-shadow: 0 0 0 3px var(--blue), var(--shadow); background: #f3f7ff; }
+.multi-bar { position: sticky; top: 6px; z-index: 5; display: flex; align-items: center; gap: 8px; background: var(--card); border-radius: 18px; padding: 8px 10px; margin-bottom: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, .08); border: 1px solid #dbe6ff; }
+.multi-bar > span { flex: 1; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: .92rem; color: var(--blue); }
+.ywb.set.hi { background: linear-gradient(180deg, #e9f8ee, #d5f0de); }
+.ywb.set.mid { background: linear-gradient(180deg, #fff6e5, #ffeacb); }
+.ywb.set.lo { background: linear-gradient(180deg, #ffecef, #ffd8df); }
+.ywb { position: relative; }
+.ywb em, .yb em, .yw-eff b.up, .yw-eff b.down { font-style: normal; font-size: .7rem; font-weight: 700; border-radius: 99px; padding: 0 6px; direction: ltr; }
+.ywb em { position: absolute; top: -6px; left: -2px; border: 2px solid #fff; }
+.up { background: #2fa36b; color: #fff; }
+.down { background: #ee4d6a; color: #fff; }
+.yw-eff { text-align: center; color: var(--ink2); margin: -4px 0 12px; }
+.yw-bulk { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 0 12px; padding: 2px; }
+.yw-bulk::-webkit-scrollbar { display: none; }
+.yw-bulk > span { flex: none; display: inline-flex; align-items: center; gap: 5px; font-weight: 600; font-size: .88rem; color: var(--ink2); }
+.yw-bulk .chip { flex: none; margin: 0; box-shadow: var(--shadow); }
+.yb-list { background: var(--card); border-radius: 18px; padding: 4px 12px; margin-bottom: 10px; }
+.yb { display: flex; align-items: center; gap: 10px; margin: 0; padding: 7px 0; border-bottom: 1px solid var(--line); font-weight: 500; color: var(--ink); }
+.yb:last-child { border-bottom: 0; }
+.yb span { flex: 1; min-width: 0; }
+.yb input { width: 74px; flex: none; text-align: center; margin: 0; padding: 8px; font-size: 1.05rem; }
+.card select { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 7px 8px; font: inherit; font-size: .88rem; max-width: 46%; }
+.card .chk { background: var(--bg); }

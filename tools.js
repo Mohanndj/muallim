@@ -312,7 +312,7 @@ Acts.xlsx = () => {
     { name: 'الحضور', columns: [{ title: 'الطالب', width: 30 }, ...ATT.slice(1).map(([, n]) => ({ title: n, width: 10 })), ...days.map((d) => ({ title: d, width: 11 }))],
       rows: list.map((s) => [s.name, ...ATT.slice(1).map(([k]) => attCount(s, k)), ...days.map((d) => attInfo((T.att[c.id][d] || {})[s.id] || 'p')[1])]) },
     { name: 'أعمال السنة', columns: [{ title: 'الطالب', width: 30 }, ...T.yw.map((y) => ({ title: `${y.name} (${y.max})`, width: 14 })), { title: 'المجموع', width: 10 }],
-      rows: list.map((s) => { const m = T.marksYW[s.id] || {}; return [s.name, ...T.yw.map((y) => m[y.k] ?? ''), T.yw.reduce((n, y) => n + (m[y.k] || 0), 0)]; }) },
+      rows: list.map((s) => [s.name, ...T.yw.map((y) => ywMark(s.id, y.k) ?? ''), ywTotal(s.id)]) },
   ]), `muallim-${today()}.xlsx`);
 };
 
@@ -326,6 +326,12 @@ Views.settings = () => `<header class="home-h"><div><h1>الإعدادات</h1><
     <div class="ev-edit">${T.evals.map((e) => `<div class="eve"><button type="button" class="eve-i" style="--c:${e.c}" data-act="eve-icon" data-k="${e.k}" aria-label="غيّر الأيقونة">${ic(e.g)}</button><input data-input="eve-name" data-k="${e.k}" value="${esc(e.name)}"><input class="eve-w" inputmode="decimal" dir="ltr" data-input="eve-w" data-k="${e.k}" value="${e.w}"><button type="button" class="x" data-act="eve-del" data-k="${e.k}" aria-label="احذف">${ic('trash')}</button></div>`).join('')}</div>
     <button type="button" class="ghost-btn wide" data-act="eve-add">${ic('plus')} أضف تقييماً</button></div>
   <div class="card"><h3>بنود أعمال السنة</h3><div class="ev-edit">${T.yw.map((y) => `<div class="eve"><input data-input="yw-name" data-k="${y.k}" value="${esc(y.name)}"><input class="eve-w" inputmode="decimal" dir="ltr" data-input="yw-max" data-k="${y.k}" value="${y.max}"></div>`).join('')}</div><p class="hint">الرقم: الدرجة الكاملة للبند.</p></div>
+  <div class="card"><h3>أثر السلوك على أعمال السنة</h3>
+    <label class="chk"><input type="checkbox" data-input="beh-on"${behOn() ? ' checked' : ''}> التقييمات تزيد درجة البند المربوط بها أو تنقصها</label>
+    ${behOn() ? `<p class="hint">يبدأ الطالب في كل بند من هذه الدرجة (ما لم ترصد له درجة بيدك)، ثم يُضاف إليها أو يُنقص منها بالتقييمات:</p>
+    <div class="ev-edit">${T.yw.map((y) => `<div class="eve"><span class="grow">${esc(y.name)} <small class="hint">من ${y.max}</small></span><input class="eve-w" inputmode="decimal" dir="ltr" data-input="yw-start" data-k="${y.k}" value="${ywStart(y)}"></div>`).join('')}</div>
+    <p class="hint">كل تقييم يؤثر في أي بند:</p>
+    <div class="ev-edit">${T.evals.map((e) => `<div class="eve"><i class="mini" style="--c:${e.c}">${ic(e.g)}</i><span class="grow">${esc(e.name)} <small class="hint" dir="ltr">${fmt1(e.w)}</small></span><select data-input="eve-y" data-k="${e.k}">${[...T.yw.map((y) => [y.k, y.name]), ['', 'لا يؤثر']].map(([k, n]) => `<option value="${k}"${evalYW(e) === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>`).join('')}</div>` : ''}</div>
   <div class="card"><h3>نسخة احتياطية</h3><p class="hint">بياناتك في هذا الجوال فقط. احفظ نسخة من حين لآخر.</p>
     <div class="row2"><button type="button" class="ghost-btn" data-act="bk-out">${ic('down')} احفظ نسخة</button><label class="ghost-btn file">${ic('up')} استرجع نسخة<input type="file" id="bkIn" accept=".json,application/json" hidden></label></div></div>
   <div class="card"><button type="button" class="red-btn wide" data-act="wipe">امسح كل البيانات</button></div>
@@ -334,6 +340,9 @@ Acts['set-save'] = (f) => { T.settings.teacher = f.elements.teacher.value.trim()
 Inputs['eve-name'] = (el) => { const e = evalOf(el.dataset.k); if (el.value.trim()) { e.name = el.value.trim(); save(); } };
 Inputs['eve-w'] = (el) => { const v = num(el.value); if (v !== null) { evalOf(el.dataset.k).w = v; save(); } };
 Inputs['yw-name'] = (el) => { const y = T.yw.find((x) => x.k === el.dataset.k); if (el.value.trim()) { y.name = el.value.trim(); save(); } };
+Inputs['beh-on'] = (el) => { T.settings.behYW = el.checked; save(); render(); };
+Inputs['yw-start'] = (el) => { const y = T.yw.find((x) => x.k === el.dataset.k), v = num(el.value); if (v !== null && v >= 0 && v <= y.max) { y.start = v; save(); } };
+Inputs['eve-y'] = (el) => { evalOf(el.dataset.k).y = el.value; save(); };
 Inputs['yw-max'] = (el) => { const v = num(el.value); if (v > 0) { T.yw.find((x) => x.k === el.dataset.k).max = v; save(); } };
 Acts['eve-del'] = (el) => { if (!armed(el)) return; T.evals = T.evals.filter((e) => e.k !== el.dataset.k); save(); render(); };
 Acts['eve-add'] = () => { T.evals.push({ k: uid(), name: 'تقييم جديد', g: 'star', c: '#3f8ee6', w: 1 }); save(); render(); };

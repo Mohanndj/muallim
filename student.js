@@ -265,11 +265,10 @@ function printStudent(s) {
   const all = behOf(s.id);
   const by = {};
   for (const b of all) { const k = `${b.reason}|${b.w}`; by[k] = (by[k] || 0) + 1; }
-  const m = T.marksYW[s.id] || {};
   printForm(`كشف ${s.name}`, `<h1>كشف متابعة طالب</h1>${stuTable(s)}
     <table><tr><th>مجموع النقاط</th><td>${fmtScore(scoreOf(s.id))}</td></tr><tr><th>الحضور</th><td>${ATT.slice(1).map(([k, n]) => `${n}: ${attCount(s, k)}`).join(' | ')}</td></tr>
     <tr><th>التقييمات</th><td>${Object.entries(by).map(([k, n]) => { const [r, w] = k.split('|'); return `${esc(r)} (${fmt1(Number(w))}): ${n}`; }).join('<br>') || 'لا يوجد'}</td></tr>
-    <tr><th>أعمال السنة</th><td>${T.yw.map((y) => `${esc(y.name)}: ${typeof m[y.k] === 'number' ? m[y.k] : '-'} من ${y.max}`).join('<br>')}</td></tr>
+    <tr><th>أعمال السنة</th><td>${T.yw.map((y) => `${esc(y.name)}: ${ywMark(s.id, y.k) ?? '-'} من ${y.max}`).join('<br>')}</td></tr>
     <tr><th>الأوسمة</th><td>${badgesOf(s.id).map((b) => (BADGES.find((x) => x[0] === b.k) || [])[1]).join('، ') || 'لا يوجد'}</td></tr>
     <tr><th>المهام في الفصل</th><td>${rolesOf(s).join('، ') || 'لا يوجد'}</td></tr>
     <tr><th>الملاحظات</th><td>${listOf('snotes').map((n) => `${n.d}: ${esc(n.t)}`).join('<br>') || 'لا يوجد'}</td></tr>
