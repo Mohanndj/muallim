@@ -11,7 +11,8 @@ const CLS_COLORS = [['#2f8456', '#144a2e'], ['#3478f6', '#1b4fc4'], ['#7a40e0', 
 Views.home = () => {
   const list = T.classes.filter((c) => !UI.q.trim() || c.name.includes(UI.q.trim()));
   return `<header class="home-h"><div><h1>الفصول</h1><p>إدارة الفصول ومتابعة مستواهم</p><span class="home-date">${ic('calendar-check')} ${dateLabel(today())} | ${hijriDate()}</span></div>
-      <div class="round-btns"><button type="button" class="round" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div></header>
+      <div class="round-btns"><button type="button" class="round wa-round" data-act="wk-open" aria-label="رسائل نهاية الأسبوع">${ic('whatsapp')}</button><button type="button" class="round" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div></header>
+    ${weekDue() ? `<button type="button" class="wa-bar" data-act="wk-open">${ic('whatsapp')} حان وقت رسائل نهاية الأسبوع لأولياء الأمور</button>` : ''}
     ${T.classes.length ? searchBar() : `<div class="home-empty"><i>${ic('school')}</i><h2>أهلاً بك${T.settings.teacher ? ` ${esc(T.settings.teacher)}` : ''}</h2><p>ابدأ بإضافة فصلك الأول، ثم أضف طلابه من كشف نور أو بلصق أسمائهم.</p><button type="button" class="blue-btn" data-act="cls-new">${ic('plus')} أضف فصلاً</button></div>`}
     ${T.classes.length ? `<div class="cls-grid">${list.map((c, ci) => {
       const lv = classLevel(c.id);
@@ -58,6 +59,7 @@ function viewFollow() {
         <div class="sc-av">${AVATAR}</div>
         <div class="sc-body"><div class="sc-top"><span class="sc-nm"><b class="sc-name">${esc(s.name)}</b>${stuTags(s)}</span><span class="sc-x"><span class="pill-blue${scoreOf(s.id) < 0 ? ' neg' : ''}">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
           <div class="slots">${slots.map((u) => { if (!u) return '<i class="slot"></i>'; const e = evalOf(u.k); return `<i class="slot on" style="--c:${e ? e.c : '#9aa3ad'}" title="${esc(u.name)}">${ic(e ? e.g : 'check')}${u.n > 1 ? `<b>${u.n}</b>` : ''}</i>`; }).join('')}</div>
+          <div class="quick">${quickEvals().map((e) => `<button type="button" style="--c:${e.c}" data-act="qev" data-id="${s.id}" data-k="${e.k}"><i>${ic(e.g)}</i>${esc(e.name.length > 9 ? `${e.name.slice(0, 9)}…` : e.name)}</button>`).join('')}</div>
           <div class="pager">${Array.from({ length: pages }, (_, i) => `<button type="button" class="${i === pg ? 'on' : ''}" data-act="stu-page" data-id="${s.id}" data-p="${i}" aria-label="صفحة ${i + 1}"></button>`).join('')}</div></div></div>`;
     }).join('')}</div>`;
 }
@@ -73,10 +75,25 @@ Acts['stu-page'] = (el) => { stuPage[el.dataset.id] = Number(el.dataset.p); rend
 // ---- نافذة التقييم ----
 let evalSid = '';
 Acts['eval-open'] = (el, e) => {
-  if (e && e.target.closest('.dots, .pager')) return;
+  if (e && e.target.closest('.dots, .pager, .quick')) return;
   // في التقييم الجماعي: الضغط يختار الطالب ولا يفتح نافذته
   if (UI.multi) { const id = el.dataset.id; if (UI.multi.has(id)) UI.multi.delete(id); else UI.multi.add(id); render(); return; }
   evalSid = el.dataset.id; openSheet(evalSheet(), evalSheet, 'gray');
+};
+// أكثر أربعة تقييمات استعمالاً: على بطاقة كل طالب، تُسجَّل بضغطة دون فتح نافذته
+function quickEvals() {
+  const n = {};
+  for (const b of T.beh) n[b.icon] = (n[b.icon] || 0) + 1;
+  return T.evals.slice().sort((a, b) => (n[b.k] || 0) - (n[a.k] || 0) || T.evals.indexOf(a) - T.evals.indexOf(b)).slice(0, 4);
+}
+Acts.qev = (el) => {
+  if (UI.multi) return;
+  const e = evalOf(el.dataset.k), s = stuOf(el.dataset.id);
+  const b = { id: uid(), sid: s.id, d: today(), at: Date.now(), icon: e.k, reason: e.name, w: e.w };
+  T.beh.push(b);
+  save(); render();
+  if (navigator.vibrate) navigator.vibrate(15);
+  toast(`${e.name}: ${shortName(s)} (${fmt1(e.w)})`, () => { T.beh = T.beh.filter((x) => x.id !== b.id); save(); render(); });
 };
 // ---- التقييم الجماعي: تقييم واحد لعدة طلاب بضغطة ----
 Acts.multi = () => { UI.multi = UI.multi ? null : new Set(); render(); };
@@ -101,7 +118,12 @@ function evalSheet() {
   if (!s) return '';
   const counts = {};
   for (const b of behOf(s.id)) counts[b.icon] = (counts[b.icon] || 0) + 1;
-  return `<div class="ev-head">${AVATAR}<b>${esc(s.name)}</b></div>${attChips(s)}
+  const list = studentsIn(s.cls), i = list.findIndex((x) => x.id === s.id);
+  return `<div class="ev-head">${AVATAR}<b>${esc(s.name)}</b>
+      <div class="ev-nav"><button type="button" class="chip" data-act="ev-move" data-d="-1"${i ? '' : ' disabled'}>${ic('back')} السابق</button><small>${i + 1} من ${list.length}</small><button type="button" class="chip" data-act="ev-move" data-d="1"${i < list.length - 1 ? '' : ' disabled'}>التالي ${ic('next')}</button></div></div>${attChips(s)}
+    <div class="ev-note"><input id="evNote" placeholder="ملاحظة سريعة على الطالب…" enterkeyhint="done"><button type="button" class="blue-btn sm" data-act="ev-note">${ic('plus')}</button></div>
+    <div class="note-chips">${NOTE_PHRASES.map((p) => `<button type="button" data-act="ev-note" data-t="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+    ${(((T.snotes || {})[s.id]) || []).filter((n) => n.d === today()).map((n) => `<p class="ev-noted">${ic('check')} ${esc(n.t)}</p>`).join('')}
     <div class="ev-grid">${T.evals.map((e) => `<button type="button" class="ev-row" data-act="ev" data-k="${e.k}"><i style="--c:${e.c}">${ic(e.g)}${counts[e.k] ? `<b>${counts[e.k]}</b>` : ''}</i><span>${esc(e.name)}</span><em>${fmt1(e.w)}</em></button>`).join('')}</div>`;
 }
 Acts.ev = (el) => {
@@ -113,6 +135,20 @@ Acts.ev = (el) => {
   if (row) row.classList.add('hit');
   if (navigator.vibrate) navigator.vibrate(15);
   toast(`${e.name}: ${shortName(stuOf(evalSid))} (${fmt1(e.w)})`, () => { T.beh = T.beh.filter((x) => x.id !== b.id); save(); refresh(); });
+};
+// ملاحظات جاهزة تُحفظ بضغطة في ملاحظات الطالب (وتدخل في رسالة الأسبوع)
+const NOTE_PHRASES = ['متميز اليوم', 'تحسن ملحوظ', 'لم يحضر الكتاب', 'لم يحضر المصحف', 'كثير الحديث', 'يحتاج متابعة في الحفظ', 'لم يحل الواجب'];
+Acts['ev-note'] = (el) => {
+  const t = (el.dataset.t || $('evNote').value).trim();
+  if (!t) { $('evNote').focus(); return; }
+  T.snotes = T.snotes || {};
+  (T.snotes[evalSid] = T.snotes[evalSid] || []).push({ id: uid(), t, d: today() });
+  save(); refresh(); toast(`حُفظت الملاحظة: ${t}`);
+};
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'evNote') { e.preventDefault(); Acts['ev-note']({ dataset: {} }); } });
+Acts['ev-move'] = (el) => {
+  const s = stuOf(evalSid), list = studentsIn(s.cls), i = list.findIndex((x) => x.id === s.id) + Number(el.dataset.d);
+  if (list[i]) { evalSid = list[i].id; refresh(); $('sheetBody').scrollTop = 0; }
 };
 Acts['eval-att'] = (el) => { setAtt(stuOf(evalSid), el.dataset.v); save(); refresh(); };
 
@@ -132,7 +168,8 @@ function viewAtt() {
 }
 document.addEventListener('change', (e) => { if (e.target.id === 'attDate' && e.target.value) { UI.date = e.target.value > today() ? today() : e.target.value; render(); } });
 Acts['att-set'] = (el) => { setAtt(stuOf(el.dataset.id), el.dataset.v, UI.date); save(); render(); };
-Acts['att-all'] = () => { if (T.att[UI.cls]) delete T.att[UI.cls][UI.date]; save(); render(); toast('الكل حاضر'); };
+// اليوم يبقى مرصوداً (فارغاً = الكل حاضر) حتى يُحسب في رسائل الأسبوع
+Acts['att-all'] = () => { T.att[UI.cls] = T.att[UI.cls] || {}; T.att[UI.cls][UI.date] = {}; save(); render(); toast('الكل حاضر'); };
 Acts['att-print'] = () => {
   const list = studentsIn(UI.cls);
   const w = window.open('', '_blank');
@@ -185,7 +222,39 @@ Acts['yw-save'] = () => {
 };
 // ---- رصد بند واحد لكل طلاب الفصل في صفحة واحدة ----
 let ywBulkK = '';
-Acts['yw-bulk'] = (el) => {
+// بالأزرار (الافتراضي): طالب واحد في كل مرة، وضغطة الدرجة تحفظها وتنقل إلى التالي
+let ywTap = { i: 0, half: false };
+Acts['yw-bulk'] = (el) => { ywBulkK = el.dataset.k; ywTap = { i: 0, half: false }; openSheet(ywTapHTML(), ywTapHTML, 'gray'); };
+function ywTapHTML() {
+  const y = T.yw.find((x) => x.k === ywBulkK), list = studentsIn(UI.cls), s = list[ywTap.i];
+  if (!s) return '';
+  const v = (T.marksYW[s.id] || {})[y.k], d = behYW(s.id, y.k), f = ywMark(s.id, y.k);
+  return `<h3>${esc(y.name)} <small>(من ${y.max})</small></h3>
+    <div class="ev-head small">${AVATAR}<b>${esc(s.name)}</b><span class="ex-live">${ywTap.i + 1} / ${list.length}</span></div>
+    <p class="yw-eff">المرصود: <b>${typeof v === 'number' ? fmtScore(v) : 'لا شيء'}</b>${d ? ` | السلوك: <b class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${fmtScore(d)}</b>` : ''}${f !== null ? ` | النهائي: <b>${fmtScore(f)}</b>` : ''}</p>
+    <div class="yt-grid">${Array.from({ length: Math.floor(y.max) + 1 }, (_, n) => Math.floor(y.max) - n).map((n) => { const val = ywTap.half && n < y.max ? n + 0.5 : n; return `<button type="button" class="${v === val ? 'on' : ''}" data-act="yt-set" data-v="${val}">${fmtScore(val)}</button>`; }).join('')}</div>
+    <div class="row2 tight3"><button type="button" class="chip${ywTap.half ? ' on' : ''}" data-act="yt-half">+ نصف</button><button type="button" class="chip" data-act="yt-move" data-d="-1"${ywTap.i ? '' : ' disabled'}>السابق</button><button type="button" class="chip" data-act="yt-move" data-d="1">تخطَّ</button><button type="button" class="chip" data-act="yt-clear">امسح</button></div>
+    <button type="button" class="link" data-act="yw-bulk-type" data-k="${y.k}">${ic('pen')} أو اكتب درجات الكل بلوحة المفاتيح</button>`;
+}
+Acts['yt-set'] = (el) => {
+  const s = studentsIn(UI.cls)[ywTap.i];
+  T.marksYW[s.id] = T.marksYW[s.id] || {};
+  T.marksYW[s.id][ywBulkK] = Number(el.dataset.v);
+  save(); render();
+  if (navigator.vibrate) navigator.vibrate(10);
+  Acts['yt-move']({ dataset: { d: 1 } });
+};
+Acts['yt-move'] = (el) => {
+  const n = studentsIn(UI.cls).length;
+  ywTap.i += Number(el.dataset.d);
+  if (ywTap.i >= n) { closeSheet(); toast('انتهى رصد الفصل'); return; }
+  ywTap.i = Math.max(0, ywTap.i); ywTap.half = false;
+  refresh();
+};
+Acts['yt-half'] = () => { ywTap.half = !ywTap.half; refresh(); };
+Acts['yt-clear'] = () => { const s = studentsIn(UI.cls)[ywTap.i]; if (T.marksYW[s.id]) delete T.marksYW[s.id][ywBulkK]; save(); render(); refresh(); };
+// بالكتابة: كل الطلاب في صفحة واحدة
+Acts['yw-bulk-type'] = (el) => {
   ywBulkK = el.dataset.k;
   const y = T.yw.find((x) => x.k === ywBulkK);
   openSheet(`<h3>${esc(y.name)} <small>(من ${y.max})</small></h3><p class="hint">اكتب درجة كل طالب، و«التالي» في لوحة المفاتيح ينقلك للذي بعده.</p>
