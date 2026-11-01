@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 19;
+const APP_VERSION = 20;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -90,6 +90,7 @@ function load() {
 }
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(T)); } catch { toast('تعذّر الحفظ: مساحة المتصفح ممتلئة'); }
+  if (typeof Sync !== 'undefined') Sync.schedule();
 }
 
 // ---- البحث ----
@@ -267,5 +268,6 @@ function start() {
   render();
   enter();
   $('sheet').addEventListener('click', (e) => { if (e.target === $('sheet')) closeSheet(); });
+  if (typeof Sync !== 'undefined') Sync.start();
   if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
 }

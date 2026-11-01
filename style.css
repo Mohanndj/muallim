@@ -590,3 +590,4 @@ a.wa-btn, a.link { text-decoration: none; }
 .wk-name { width: 100%; font-weight: 700; margin-bottom: 6px; }
 .wk-vars { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
 .wk-vars button { border: 1px dashed #9cc3ff; background: var(--blue-soft); color: var(--blue); border-radius: 99px; padding: 4px 10px; font-size: .8rem; }
+.sync-st { font-weight: 700; color: var(--blue); margin: 4px 0; }
