@@ -74,6 +74,8 @@ Acts['stu-page'] = (el) => { stuPage[el.dataset.id] = Number(el.dataset.p); rend
 
 // ---- نافذة التقييم ----
 let evalSid = '';
+// صفحة يُرجع إليها بعد تسجيل التقييم (مثل «من يجيب؟»)
+let evalBack = null;
 Acts['eval-open'] = (el, e) => {
   if (e && e.target.closest('.dots, .pager, .quick')) return;
   // في التقييم الجماعي: الضغط يختار الطالب ولا يفتح نافذته
@@ -135,6 +137,7 @@ Acts.ev = (el) => {
   if (row) row.classList.add('hit');
   if (navigator.vibrate) navigator.vibrate(15);
   toast(`${e.name}: ${shortName(stuOf(evalSid))} (${fmt1(e.w)})`, () => { T.beh = T.beh.filter((x) => x.id !== b.id); save(); refresh(); });
+  if (evalBack) { const back = evalBack; evalBack = null; back(); }
 };
 // ملاحظات جاهزة تُحفظ بضغطة في ملاحظات الطالب (وتدخل في رسالة الأسبوع)
 const NOTE_PHRASES = ['متميز اليوم', 'تحسن ملحوظ', 'لم يحضر الكتاب', 'لم يحضر المصحف', 'كثير الحديث', 'يحتاج متابعة في الحفظ', 'لم يحل الواجب'];

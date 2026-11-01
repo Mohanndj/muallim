@@ -35,6 +35,7 @@ function beep(n = 3) {
 function onSheetClose() {
   clearInterval(toolTimer); toolTimer = null;
   if (mic) { mic.getTracks().forEach((t) => t.stop()); mic = null; }
+  evalBack = null;
   if (pfD) { pfOrphans(); pfD = null; }
 }
 Acts.tool = (el) => (logAct(`tool:${el.dataset.k}`), { minute: () => countdown('الدقيقة الواحدة', 60, true), timer: () => timerSheet(), peer: peerSheet, pick: pickSheet, notes: notesSheet, calm: calmSheet, groups: groupsSheet, secret: secretSheet }[el.dataset.k])();
@@ -83,8 +84,10 @@ function peerSheet() {
 let picked = [];
 function pickSheet(s) {
   openSheet(`<h3 class="center">من يجيب؟</h3><div class="pick-box">${AVATAR}<b id="pickN">${s ? esc(s.name) : '؟'}</b></div>
-    <button type="button" class="blue-btn wide" data-act="pick-go">اختر طالباً</button>${s ? `<button type="button" class="ghost-btn wide" data-act="eval-open" data-id="${s.id}">قيّمه</button>` : ''}`, null, 'wide');
+    <button type="button" class="blue-btn wide" data-act="pick-go">اختر طالباً</button>${s ? `<button type="button" class="ghost-btn wide" data-act="pick-ev" data-id="${s.id}">قيّمه</button>` : ''}`, null, 'wide');
 }
+// «قيّمه»: بعد تسجيل التقييم ترجع صفحة «من يجيب؟» نفسها
+Acts['pick-ev'] = (el) => { const s = stuOf(el.dataset.id); Acts['eval-open'](el); evalBack = () => pickSheet(s); };
 Acts['pick-go'] = () => {
   const p = present();
   if (!p.length) return;
