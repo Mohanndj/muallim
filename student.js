@@ -252,7 +252,7 @@ Acts['move-go'] = (el) => {
 SMV.log = () => {
   const s = smS();
   const recent = behOf(s.id).sort((a, b) => b.at - a.at);
-  return `${smHead('سجل التقييمات')}<div class="sm-card">${recent.length ? `<ul class="log">${recent.map((b) => { const e = evalOf(b.icon); return `<li><i style="--c:${e ? e.c : '#9aa3ad'}">${ic(e ? e.g : 'check')}</i><span class="grow">${esc(b.reason)}</span><em>${fmt1(b.w)}</em><small>${dateLabel(b.d)}</small><button type="button" class="x" data-act="ev-del" data-id="${b.id}" aria-label="احذف">${ic('x')}</button></li>`; }).join('')}</ul>` : '<p class="hint">لا تقييمات بعد.</p>'}</div>
+  return `${smHead('سجل التقييمات')}<div class="sm-card">${recent.length ? `<ul class="log">${recent.map((b) => { const L = behLook(b); return `<li><i style="--c:${L.c}">${ic(L.g)}</i><span class="grow">${esc(b.reason)}${b.t ? ` <small>${esc(b.t)}</small>` : ''}</span><em>${fmt1(b.w)}</em><small>${dateLabel(b.d)}</small><button type="button" class="x" data-act="ev-del" data-id="${b.id}" aria-label="احذف">${ic('x')}</button></li>`; }).join('')}</ul>` : '<p class="hint">لا تقييمات بعد.</p>'}</div>
     <p class="hint">الغياب: ${attCount(s, 'a')} | التأخر: ${attCount(s, 'l')} | الاستئذان: ${attCount(s, 'x')}</p>`;
 };
 Acts['ev-del'] = (el) => { if (!armed(el)) return; T.beh = T.beh.filter((b) => b.id !== el.dataset.id); save(); refresh(); };

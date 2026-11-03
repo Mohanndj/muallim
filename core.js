@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 20;
+const APP_VERSION = 21;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -74,13 +74,17 @@ function normalize(d) {
     classes: arr(d.classes).filter((c) => c && c.id).map((c) => ({ id: c.id, name: String(c.name || '') })),
     students: arr(d.students).filter((s) => s && s.id).map((s) => ({ id: s.id, cls: s.cls || '', name: String(s.name || ''), parent: String(s.parent || ''), phone: String(s.phone || '') })),
     // تقييم: الأيقونة (k) واسمها ودرجتها وقت التسجيل
-    beh: arr(d.beh).filter((b) => b && b.id && b.sid).map((b) => ({ id: b.id, sid: b.sid, d: b.d || today(), at: b.at || Date.now(), icon: String(b.icon || ''), reason: String(b.reason || ''), w: typeof b.w === 'number' ? b.w : b.kind === 'neg' ? -1 : 1 })),
+    beh: arr(d.beh).filter((b) => b && b.id && b.sid).map((b) => ({ id: b.id, sid: b.sid, d: b.d || today(), at: b.at || Date.now(), icon: String(b.icon || ''), reason: String(b.reason || ''), w: typeof b.w === 'number' ? b.w : b.kind === 'neg' ? -1 : 1,
+      // الإصدار ٢١: رقم الحصة (p)، وتفاصيل التسميع (t نصاً، ts للسورة والآيات)، ورسم الملاحظة المكتوبة ولونها (g، c)
+      ...(b.p ? { p: Number(b.p) } : {}), ...(b.t ? { t: String(b.t) } : {}), ...(b.ts && typeof b.ts === 'object' ? { ts: b.ts } : {}), ...(b.g ? { g: String(b.g) } : {}), ...(b.c ? { c: String(b.c) } : {}) })),
     // الحضور: لكل فصل ولكل يوم: حالة من لم يكن حاضراً (الباقون حاضرون)
     att: d.att && typeof d.att === 'object' ? d.att : {},
     // درجات أعمال السنة: marksYW[sid][k]
     marksYW: d.marksYW && typeof d.marksYW === 'object' ? d.marksYW : {},
     groups: arr(d.groups).filter((g) => g && g.id && g.cls).map((g) => ({ id: g.id, cls: g.cls, name: String(g.name || ''), color: Number(g.color) || 0, members: arr(g.members).map(String) })),
     notes: d.notes && typeof d.notes === 'object' ? d.notes : {},
+    // جدول الحصص: sched['<اليوم>-<الحصة>'] = رقم الفصل (اليوم ٠ الأحد … ٤ الخميس)
+    sched: d.sched && typeof d.sched === 'object' ? d.sched : {},
   };
 }
 function load() {
@@ -100,6 +104,9 @@ const studentsIn = (cid) => T.students.filter((s) => s.cls === cid).sort((a, b) 
 const shortName = (s) => s.name.trim().split(/\s+/).slice(0, 2).join(' ');
 const behOf = (sid) => T.beh.filter((b) => b.sid === sid);
 const evalOf = (k) => T.evals.find((e) => e.k === k);
+// رسم التقييم ولونه؛ والملاحظة المكتوبة بأيقونة (icon = '_n') تحمل رسمها ولونها
+const NOTE_K = '_n';
+const behLook = (b) => { const e = evalOf(b.icon); return e ? { g: e.g, c: e.c } : { g: b.g && faName(b.g) ? b.g : 'check', c: b.c || '#9aa3ad' }; };
 const scoreOf = (sid) => behOf(sid).reduce((n, b) => n + b.w, 0);
 const attOf = (s, d = today()) => ((T.att[s.cls] || {})[d] || {})[s.id] || 'p';
 const attCount = (s, v) => Object.values(T.att[s.cls] || {}).filter((day) => day[s.id] === v).length;
@@ -113,7 +120,8 @@ const EVAL_YW = { recite: 'act', hifz: 'act', midhifz: 'act', hw: 'hw', nohw: 'h
 const evalYW = (e) => (typeof e.y === 'string' ? e.y : EVAL_YW[e.k] || 'part');
 const behOn = () => T.settings.behYW !== false;
 // مجموع ما أضافه السلوك إلى بند أو أنقصه منه
-const behYW = (sid, k) => (behOn() ? behOf(sid).reduce((n, b) => { const e = evalOf(b.icon); return n + (e && evalYW(e) === k ? b.w : 0); }, 0) : 0);
+// الملاحظة المكتوبة بأيقونة تُحسب في «المشاركة» كالتقييمات غير المربوطة
+const behYW = (sid, k) => (behOn() ? behOf(sid).reduce((n, b) => { const e = evalOf(b.icon); return n + ((e ? evalYW(e) : b.icon === NOTE_K ? 'part' : '') === k ? b.w : 0); }, 0) : 0);
 const ywStart = (y) => (typeof y.start === 'number' ? y.start : y.max);
 // درجة البند النهائية: المرصود بيده (أو من الاختبارات)، وإلا درجة البداية إن كان للسلوك فيه أثر؛ ثم أثر السلوك، بين صفر والكاملة
 function ywMark(sid, k) {

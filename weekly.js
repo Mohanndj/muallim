@@ -55,7 +55,7 @@ function weekStats(s, w = weekRange()) {
   const notes = (((T.snotes || {})[s.id]) || []).filter((n) => inWeek(n.d, w)).map((n) => n.t);
   return {
     days: days.size, present: days.size - absent - fled, absent, late: st('l'), fled, exits: st('x'),
-    points: behs.reduce((n, b) => n + b.w, 0), tasmee: behs.filter(isTasmee).length,
+    points: behs.reduce((n, b) => n + b.w, 0), tasmee: behs.filter(isTasmee).length, tasmeeAt: behs.filter((b) => isTasmee(b) && b.t).sort((a, b) => a.at - b.at).map((b) => b.t),
     good: count(behs.filter((b) => b.w > 0)), bad: [...count(behs.filter((b) => b.w < 0)), ...notes],
   };
 }
@@ -65,7 +65,7 @@ function waFill(tpl, s, w = weekRange()) {
   const v = {
     الطالب: s.name, الأسبوع: `${dateLabel(w.from)} إلى ${dateLabel(w.to)}`, المادة: T.settings.subject, المعلم: T.settings.teacher || 'معلم المادة',
     الحضور: waNum(x.present, 'يوم واحد', 'يومان', 'أيام'), الغياب: waNum(x.absent, 'يوم واحد', 'يومان', 'أيام'), التأخر: waNum(x.late, 'مرة', 'مرتان', 'مرات'),
-    الهروب: waNum(x.fled, 'مرة', 'مرتان', 'مرات'), الاستئذان: waNum(x.exits, 'مرة', 'مرتان', 'مرات'), النقاط: fmtScore(x.points), التسميع: waNum(x.tasmee, 'مرة', 'مرتان', 'مرات'),
+    الهروب: waNum(x.fled, 'مرة', 'مرتان', 'مرات'), الاستئذان: waNum(x.exits, 'مرة', 'مرتان', 'مرات'), النقاط: fmtScore(x.points), التسميع: `${waNum(x.tasmee, 'مرة', 'مرتان', 'مرات')}${x.tasmeeAt.length ? ` (${x.tasmeeAt.join('، ')})` : ''}`,
     الإيجابيات: x.good.join('، ') || 'لا يوجد', الملاحظات: x.bad.join('، ') || 'لا شيء، ولله الحمد',
   };
   return tpl.text.replace(/\{([^{}]+)\}/g, (m, k) => (k in v ? String(v[k]) : m));

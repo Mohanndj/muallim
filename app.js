@@ -10,8 +10,9 @@ const match = (s) => !UI.q.trim() || s.name.includes(UI.q.trim());
 const CLS_COLORS = [['#2f8456', '#144a2e'], ['#3478f6', '#1b4fc4'], ['#7a40e0', '#4a2296'], ['#e9762b', '#b4500e'], ['#159a9c', '#0b6668'], ['#d9406f', '#9c1c47']];
 Views.home = () => {
   const list = T.classes.filter((c) => !UI.q.trim() || c.name.includes(UI.q.trim()));
-  return `<header class="home-h"><div><h1>الفصول</h1><p>إدارة الفصول ومتابعة مستواهم</p><span class="home-date">${ic('calendar-check')} ${dateLabel(today())} | ${hijriDate()}</span></div>
-      <div class="round-btns"><button type="button" class="round wa-round" data-act="wk-open" aria-label="رسائل نهاية الأسبوع">${ic('whatsapp')}</button><button type="button" class="round" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div></header>
+  return `<header class="home-h"><div><h1>الفصول</h1><p>إدارة الفصول ومتابعة مستواهم</p><span class="home-date">${ic('calendar-check')} ${dateLabel(today())} | ${hijriDate()}</span><span class="ver-tag">الإصدار ${APP_VERSION}</span></div>
+      <div class="round-btns"><button type="button" class="round" data-act="sch-open" aria-label="جدول الحصص" title="جدول الحصص">${ic('calendar-days')}</button><button type="button" class="round wa-round" data-act="wk-open" aria-label="رسائل نهاية الأسبوع">${ic('whatsapp')}</button><button type="button" class="round" data-act="cls-new" aria-label="أضف فصلاً">${ic('plus')}</button></div></header>
+    ${todayPersHTML()}
     ${weekDue() ? `<button type="button" class="wa-bar" data-act="wk-open">${ic('whatsapp')} حان وقت رسائل نهاية الأسبوع لأولياء الأمور</button>` : ''}
     ${T.classes.length ? searchBar() : `<div class="home-empty"><i>${ic('school')}</i><h2>أهلاً بك${T.settings.teacher ? ` ${esc(T.settings.teacher)}` : ''}</h2><p>ابدأ بإضافة فصلك الأول، ثم أضف طلابه من كشف نور أو بلصق أسمائهم.</p><button type="button" class="blue-btn" data-act="cls-new">${ic('plus')} أضف فصلاً</button></div>`}
     ${T.classes.length ? `<div class="cls-grid">${list.map((c, ci) => {
@@ -46,29 +47,32 @@ function viewFollow() {
   }
   const sel = UI.multi;
   return `${classHead(`<button type="button" class="round${sel ? ' on' : ''}" data-act="multi" aria-label="تقييم جماعي" title="تقييم جماعي">${ic('list-check')}</button><button type="button" class="round" data-act="cls-more" data-id="${UI.cls}" aria-label="خيارات">${ic('more')}</button>`)}
+    ${(() => { const p = perOf(UI.cls); return p.length ? `<p class="per-now">${ic('clock')} ${p.map(perName).join(' و')} | ${dateLabel(today())}</p>` : ''; })()}
+    <div class="fl-bar"><button type="button" class="blue-btn" data-act="board">${ic('table-cells-large')} لوحة الفصل</button><button type="button" class="ghost-btn" data-act="per-log">${ic('calendar-days')} سجل الحصص</button></div>
     ${searchBar()}
     ${sel ? `<div class="multi-bar"><span>${ic('list-check')} اختر الطلاب: ${sel.size} من ${list.length}</span><button type="button" class="ghost-btn sm" data-act="multi-all">${sel.size === list.length ? 'ألغِ الكل' : 'الكل'}</button><button type="button" class="blue-btn sm" data-act="multi-ev"${sel.size ? '' : ' disabled'}>قيّمهم</button><button type="button" class="x" data-act="multi" aria-label="إلغاء">${ic('x')}</button></div>` : ''}
-    <div class="cards">${list.filter(match).map((s) => {
+    <div class="cards">${(() => { const st = clsStart(UI.cls); return list.filter(match).map((s) => {
       // كل أيقونة استُعملت مع الطالب مرة واحدة بعدّادها، بترتيب أول استعمال؛ وعشر خانات في الصفحة
       const used = [];
-      for (const b of behOf(s.id).sort((x, y) => x.at - y.at)) { const u = used.find((x) => x.k === b.icon && x.name === b.reason); if (u) u.n++; else used.push({ k: b.icon, name: b.reason, n: 1 }); }
+      for (const b of behOf(s.id).sort((x, y) => x.at - y.at)) { const u = used.find((x) => x.k === b.icon && x.name === b.reason); if (u) u.n++; else used.push({ k: b.icon, name: b.reason, n: 1, ...behLook(b) }); }
       const pages = Math.max(2, Math.ceil(used.length / 10));
       const pg = Math.min(stuPage[s.id] || 0, pages - 1);
       const slots = Array.from({ length: 10 }, (_, i) => used[pg * 10 + i]);
       return `<div class="scard${sel && sel.has(s.id) ? ' sel' : ''}" data-act="eval-open" data-id="${s.id}">
-        <div class="sc-av">${AVATAR}</div>
-        <div class="sc-body"><div class="sc-top"><span class="sc-nm"><b class="sc-name">${esc(s.name)}</b>${stuTags(s)}</span><span class="sc-x"><span class="pill-blue${scoreOf(s.id) < 0 ? ' neg' : ''}">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
-          <div class="slots">${slots.map((u) => { if (!u) return '<i class="slot"></i>'; const e = evalOf(u.k); return `<i class="slot on" style="--c:${e ? e.c : '#9aa3ad'}" title="${esc(u.name)}">${ic(e ? e.g : 'check')}${u.n > 1 ? `<b>${u.n}</b>` : ''}</i>`; }).join('')}</div>
+        <div class="sc-av" data-act="stu-data" data-id="${s.id}" role="button" aria-label="بيانات الطالب">${AVATAR}</div>
+        <div class="sc-body"><div class="sc-top"><span class="sc-nm"><b class="sc-name">${esc(s.name)}</b>${stuTags(s, cleanWeeks(s, st))}</span><span class="sc-x"><span class="pill-blue${scoreOf(s.id) < 0 ? ' neg' : ''}">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
+          <div class="slots">${slots.map((u) => { if (!u) return '<i class="slot"></i>'; const L = evalOf(u.k) || u; return `<i class="slot on" style="--c:${L.c}" title="${esc(u.name)}">${ic(L.g)}${u.n > 1 ? `<b>${u.n}</b>` : ''}</i>`; }).join('')}</div>
+          ${attMini(s)}
           <div class="quick">${quickEvals().map((e) => `<button type="button" style="--c:${e.c}" data-act="qev" data-id="${s.id}" data-k="${e.k}"><i>${ic(e.g)}</i>${esc(e.name.length > 9 ? `${e.name.slice(0, 9)}…` : e.name)}</button>`).join('')}</div>
           <div class="pager">${Array.from({ length: pages }, (_, i) => `<button type="button" class="${i === pg ? 'on' : ''}" data-act="stu-page" data-id="${s.id}" data-p="${i}" aria-label="صفحة ${i + 1}"></button>`).join('')}</div></div></div>`;
-    }).join('')}</div>`;
+    }).join(''); })()}</div>`;
 }
 // ما يظهر تحت اسم الطالب: مهمته في الفصل، وأوسمته، وخروجه من الحصة الآن
-function stuTags(s) {
+function stuTags(s, clean = 0) {
   const roles = rolesOf(s), bs = badgesOf(s.id), out = isOut(s.id);
-  if (!roles.length && !bs.length && !out) return '';
+  if (!roles.length && !bs.length && !out && !clean) return '';
   const seen = [...new Set(bs.map((b) => b.k))];
-  return `<span class="sc-tags">${out ? `<em class="tag out">${ic('hourglass-half')} خارج الفصل</em>` : ''}${roles.map((r) => `<em class="tag role">${ic('crown')} ${r}</em>`).join('')}${seen.map((k) => { const B = BADGES.find((x) => x[0] === k); return B ? `<i class="bdg-mini" style="--c:${B[3]}" title="${B[1]}">${ic(B[2])}</i>` : ''; }).join('')}</span>`;
+  return `<span class="sc-tags">${clean ? `<em class="tag clean" title="بلا ملاحظة سلبية">${ic('shield-halved')} ${weeksWord(clean)} بلا سلبيات</em>` : ''}${out ? `<em class="tag out">${ic('hourglass-half')} خارج الفصل</em>` : ''}${roles.map((r) => `<em class="tag role">${ic('crown')} ${r}</em>`).join('')}${seen.map((k) => { const B = BADGES.find((x) => x[0] === k); return B ? `<i class="bdg-mini" style="--c:${B[3]}" title="${B[1]}">${ic(B[2])}</i>` : ''; }).join('')}</span>`;
 }
 Acts['stu-page'] = (el) => { stuPage[el.dataset.id] = Number(el.dataset.p); render(); };
 
@@ -77,7 +81,7 @@ let evalSid = '';
 // صفحة يُرجع إليها بعد تسجيل التقييم (مثل «من يجيب؟»)
 let evalBack = null;
 Acts['eval-open'] = (el, e) => {
-  if (e && e.target.closest('.dots, .pager, .quick')) return;
+  if (e && e.target.closest('.dots, .pager, .quick, .att-mini')) return;
   // في التقييم الجماعي: الضغط يختار الطالب ولا يفتح نافذته
   if (UI.multi) { const id = el.dataset.id; if (UI.multi.has(id)) UI.multi.delete(id); else UI.multi.add(id); render(); return; }
   evalSid = el.dataset.id; openSheet(evalSheet(), evalSheet, 'gray');
@@ -91,11 +95,14 @@ function quickEvals() {
 Acts.qev = (el) => {
   if (UI.multi) return;
   const e = evalOf(el.dataset.k), s = stuOf(el.dataset.id);
-  const b = { id: uid(), sid: s.id, d: today(), at: Date.now(), icon: e.k, reason: e.name, w: e.w };
-  T.beh.push(b);
-  save(); render();
-  if (navigator.vibrate) navigator.vibrate(15);
-  toast(`${e.name}: ${shortName(s)} (${fmt1(e.w)})`, () => { T.beh = T.beh.filter((x) => x.id !== b.id); save(); render(); });
+  withTasmee(s.id, e, (x, asked) => {
+    const b = addBeh(s.id, e, x);
+    save();
+    if (asked) closeSheet();
+    render();
+    if (navigator.vibrate) navigator.vibrate(15);
+    toast(behToast(b), behUndo(b));
+  });
 };
 // ---- التقييم الجماعي: تقييم واحد لعدة طلاب بضغطة ----
 Acts.multi = () => { UI.multi = UI.multi ? null : new Set(); render(); };
@@ -104,8 +111,7 @@ Acts['multi-ev'] = () => openSheet(`<h3>قيّم ${UI.multi.size} ${UI.multi.siz
   <div class="ev-grid">${T.evals.map((e) => `<button type="button" class="ev-row" data-act="multi-go" data-k="${e.k}"><i style="--c:${e.c}">${ic(e.g)}</i><span>${esc(e.name)}</span><em>${fmt1(e.w)}</em></button>`).join('')}</div>`, null, 'gray');
 Acts['multi-go'] = (el) => {
   const e = evalOf(el.dataset.k), at = Date.now();
-  const added = [...UI.multi].map((sid) => ({ id: uid(), sid, d: today(), at, icon: e.k, reason: e.name, w: e.w }));
-  T.beh.push(...added);
+  const added = [...UI.multi].map((sid) => addBeh(sid, e, { at }));
   const n = added.length, ids = new Set(added.map((b) => b.id));
   UI.multi = null;
   save(); closeSheet(); render();
@@ -126,18 +132,22 @@ function evalSheet() {
     <div class="ev-note"><input id="evNote" placeholder="ملاحظة سريعة على الطالب…" enterkeyhint="done"><button type="button" class="blue-btn sm" data-act="ev-note">${ic('plus')}</button></div>
     <div class="note-chips">${NOTE_PHRASES.map((p) => `<button type="button" data-act="ev-note" data-t="${esc(p)}">${esc(p)}</button>`).join('')}</div>
     ${(((T.snotes || {})[s.id]) || []).filter((n) => n.d === today()).map((n) => `<p class="ev-noted">${ic('check')} ${esc(n.t)}</p>`).join('')}
-    <div class="ev-grid">${T.evals.map((e) => `<button type="button" class="ev-row" data-act="ev" data-k="${e.k}"><i style="--c:${e.c}">${ic(e.g)}${counts[e.k] ? `<b>${counts[e.k]}</b>` : ''}</i><span>${esc(e.name)}</span><em>${fmt1(e.w)}</em></button>`).join('')}</div>`;
+    <div class="ev-grid">${T.evals.map((e) => `<button type="button" class="ev-row" data-act="ev" data-k="${e.k}"><i style="--c:${e.c}">${ic(e.g)}${counts[e.k] ? `<b>${counts[e.k]}</b>` : ''}</i><span>${esc(e.name)}</span><em>${fmt1(e.w)}</em></button>`).join('')}
+      <button type="button" class="ev-row" data-act="cn-open" data-id="${s.id}"><i style="--c:#3f8ee6">${ic('pen')}</i><span>ملاحظة بأيقونة</span></button></div>`;
 }
 Acts.ev = (el) => {
-  const e = evalOf(el.dataset.k);
-  const b = { id: uid(), sid: evalSid, d: today(), at: Date.now(), icon: e.k, reason: e.name, w: e.w };
-  T.beh.push(b);
-  save(); refresh();
-  const row = $('sheetBody').querySelector(`.ev-row[data-k="${e.k}"]`);
-  if (row) row.classList.add('hit');
-  if (navigator.vibrate) navigator.vibrate(15);
-  toast(`${e.name}: ${shortName(stuOf(evalSid))} (${fmt1(e.w)})`, () => { T.beh = T.beh.filter((x) => x.id !== b.id); save(); refresh(); });
-  if (evalBack) { const back = evalBack; evalBack = null; back(); }
+  const e = evalOf(el.dataset.k), sid = evalSid, back = evalBack;
+  withTasmee(sid, e, (x, asked) => {
+    const b = addBeh(sid, e, x);
+    save();
+    if (asked) { evalSid = sid; openSheet(evalSheet(), evalSheet, 'gray'); }
+    refresh();
+    const row = $('sheetBody').querySelector(`.ev-row[data-k="${e.k}"]`);
+    if (row) row.classList.add('hit');
+    if (navigator.vibrate) navigator.vibrate(15);
+    toast(behToast(b), behUndo(b));
+    if (back) { evalBack = null; back(); }
+  });
 };
 // ملاحظات جاهزة تُحفظ بضغطة في ملاحظات الطالب (وتدخل في رسالة الأسبوع)
 const NOTE_PHRASES = ['متميز اليوم', 'تحسن ملحوظ', 'لم يحضر الكتاب', 'لم يحضر المصحف', 'كثير الحديث', 'يحتاج متابعة في الحفظ', 'لم يحل الواجب'];
