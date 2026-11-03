@@ -658,3 +658,8 @@ a.wa-btn, a.link { text-decoration: none; }
 .cn-w button.neg { color: var(--red); }
 .cn-w button.on { background: #23874a; color: #fff; }
 .cn-w button.neg.on { background: var(--red); }
+/* الإصدار ٢٢: ما سُجّل اليوم في نافذة الطالب، وحذف التقييم من أيقونة البطاقة */
+.ev-today { margin-top: 8px; }
+.ev-today > b { display: block; font-size: .9rem; margin-bottom: 2px; }
+.ev-today .log li, .sheet .log li { gap: 8px; }
+.slot.on { cursor: pointer; }

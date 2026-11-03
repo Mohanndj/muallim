@@ -61,7 +61,7 @@ function viewFollow() {
       return `<div class="scard${sel && sel.has(s.id) ? ' sel' : ''}" data-act="eval-open" data-id="${s.id}">
         <div class="sc-av" data-act="stu-data" data-id="${s.id}" role="button" aria-label="بيانات الطالب">${AVATAR}</div>
         <div class="sc-body"><div class="sc-top"><span class="sc-nm"><b class="sc-name">${esc(s.name)}</b>${stuTags(s, cleanWeeks(s, st))}</span><span class="sc-x"><span class="pill-blue${scoreOf(s.id) < 0 ? ' neg' : ''}">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
-          <div class="slots">${slots.map((u) => { if (!u) return '<i class="slot"></i>'; const L = evalOf(u.k) || u; return `<i class="slot on" style="--c:${L.c}" title="${esc(u.name)}">${ic(L.g)}${u.n > 1 ? `<b>${u.n}</b>` : ''}</i>`; }).join('')}</div>
+          <div class="slots">${slots.map((u) => { if (!u) return '<i class="slot"></i>'; const L = evalOf(u.k) || u; return `<i class="slot on" style="--c:${L.c}" title="${esc(u.name)}" data-act="slot-open" data-id="${s.id}" data-k="${esc(u.k)}" data-name="${esc(u.name)}">${ic(L.g)}${u.n > 1 ? `<b>${u.n}</b>` : ''}</i>`; }).join('')}</div>
           ${attMini(s)}
           <div class="quick">${quickEvals().map((e) => `<button type="button" style="--c:${e.c}" data-act="qev" data-id="${s.id}" data-k="${e.k}"><i>${ic(e.g)}</i>${esc(e.name.length > 9 ? `${e.name.slice(0, 9)}…` : e.name)}</button>`).join('')}</div>
           <div class="pager">${Array.from({ length: pages }, (_, i) => `<button type="button" class="${i === pg ? 'on' : ''}" data-act="stu-page" data-id="${s.id}" data-p="${i}" aria-label="صفحة ${i + 1}"></button>`).join('')}</div></div></div>`;
@@ -131,7 +131,7 @@ function evalSheet() {
       <div class="ev-nav"><button type="button" class="chip" data-act="ev-move" data-d="-1"${i ? '' : ' disabled'}>${ic('back')} السابق</button><small>${i + 1} من ${list.length}</small><button type="button" class="chip" data-act="ev-move" data-d="1"${i < list.length - 1 ? '' : ' disabled'}>التالي ${ic('next')}</button></div></div>${attChips(s)}
     <div class="ev-note"><input id="evNote" placeholder="ملاحظة سريعة على الطالب…" enterkeyhint="done"><button type="button" class="blue-btn sm" data-act="ev-note">${ic('plus')}</button></div>
     <div class="note-chips">${NOTE_PHRASES.map((p) => `<button type="button" data-act="ev-note" data-t="${esc(p)}">${esc(p)}</button>`).join('')}</div>
-    ${(((T.snotes || {})[s.id]) || []).filter((n) => n.d === today()).map((n) => `<p class="ev-noted">${ic('check')} ${esc(n.t)}</p>`).join('')}
+    ${evTodayHTML(s)}
     <div class="ev-grid">${T.evals.map((e) => `<button type="button" class="ev-row" data-act="ev" data-k="${e.k}"><i style="--c:${e.c}">${ic(e.g)}${counts[e.k] ? `<b>${counts[e.k]}</b>` : ''}</i><span>${esc(e.name)}</span><em>${fmt1(e.w)}</em></button>`).join('')}
       <button type="button" class="ev-row" data-act="cn-open" data-id="${s.id}"><i style="--c:#3f8ee6">${ic('pen')}</i><span>ملاحظة بأيقونة</span></button></div>`;
 }
@@ -149,6 +149,40 @@ Acts.ev = (el) => {
     if (back) { evalBack = null; back(); }
   });
 };
+// ما سُجّل على الطالب اليوم (تقييمات وملاحظات)، ولكل واحد زر حذف
+function evTodayHTML(s) {
+  const bs = behOf(s.id).filter((b) => b.d === today()).sort((a, b) => b.at - a.at);
+  const ns = (((T.snotes || {})[s.id]) || []).filter((n) => n.d === today());
+  if (!bs.length && !ns.length) return '';
+  return `<div class="sm-card ev-today"><b>سُجّل اليوم</b><ul class="log">${bs.map((b) => behLi(b)).join('')}${ns.map((n) => `<li><i style="--c:#36b3c6">${ic('clipboard')}</i><span class="grow">${esc(n.t)}</span><button type="button" class="x" data-act="snote-del" data-sid="${s.id}" data-id="${n.id}" aria-label="احذف">${ic('trash')}</button></li>`).join('')}</ul></div>`;
+}
+const behLi = (b, withDate) => { const L = behLook(b); return `<li><i style="--c:${L.c}">${ic(L.g)}</i><span class="grow">${esc(b.reason)}${b.t ? ` <small>${esc(b.t)}</small>` : ''}</span>${withDate ? `<small>${dateLabel(b.d)}${b.p ? ` | ${PER_NAMES[b.p - 1] || ''}` : ''}</small>` : ''}<em>${fmt1(b.w)}</em><button type="button" class="x" data-act="beh-del" data-id="${b.id}" aria-label="احذف">${ic('trash')}</button></li>`; };
+// الحذف بضغطة مع «تراجع»
+Acts['beh-del'] = (el) => {
+  const b = T.beh.find((x) => x.id === el.dataset.id);
+  if (!b) return;
+  T.beh = T.beh.filter((x) => x !== b);
+  save(); refresh();
+  toast(`حُذف: ${b.reason}`, () => { T.beh.push(b); save(); refresh(); });
+};
+Acts['snote-del'] = (el) => {
+  const list = (T.snotes || {})[el.dataset.sid] || [], i = list.findIndex((n) => n.id === el.dataset.id);
+  if (i < 0) return;
+  const [n] = list.splice(i, 1);
+  save(); refresh();
+  toast(`حُذفت الملاحظة: ${n.t}`, () => { list.splice(i, 0, n); save(); refresh(); });
+};
+// الضغط على أيقونة في البطاقة: كل ما سُجّل بها بتواريخه، ولكل واحد زر حذف
+let slotQ = null;
+Acts['slot-open'] = (el) => { if (UI.multi) return; slotQ = { sid: el.dataset.id, k: el.dataset.k, name: el.dataset.name }; openSheet(slotHTML(), slotHTML, 'gray'); };
+function slotHTML() {
+  const s = stuOf(slotQ.sid);
+  if (!s) return '';
+  const bs = behOf(s.id).filter((b) => b.icon === slotQ.k && b.reason === slotQ.name).sort((a, b) => b.at - a.at);
+  return `<div class="ev-head small">${AVATAR}<b>${esc(s.name)}</b></div>
+    <h3>${esc(slotQ.name)} <small class="hint">(${bs.length === 1 ? 'مرة' : bs.length === 2 ? 'مرتان' : `${bs.length} ${bs.length < 11 ? 'مرات' : 'مرة'}`})</small></h3>
+    <div class="sm-card">${bs.length ? `<ul class="log">${bs.map((b) => behLi(b, true)).join('')}</ul>` : '<p class="hint">لا شيء.</p>'}</div>`;
+}
 // ملاحظات جاهزة تُحفظ بضغطة في ملاحظات الطالب (وتدخل في رسالة الأسبوع)
 const NOTE_PHRASES = ['متميز اليوم', 'تحسن ملحوظ', 'لم يحضر الكتاب', 'لم يحضر المصحف', 'كثير الحديث', 'يحتاج متابعة في الحفظ', 'لم يحل الواجب'];
 Acts['ev-note'] = (el) => {
