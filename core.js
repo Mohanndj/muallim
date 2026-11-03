@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 22;
+const APP_VERSION = 23;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -76,7 +76,7 @@ function normalize(d) {
     // تقييم: الأيقونة (k) واسمها ودرجتها وقت التسجيل
     beh: arr(d.beh).filter((b) => b && b.id && b.sid).map((b) => ({ id: b.id, sid: b.sid, d: b.d || today(), at: b.at || Date.now(), icon: String(b.icon || ''), reason: String(b.reason || ''), w: typeof b.w === 'number' ? b.w : b.kind === 'neg' ? -1 : 1,
       // الإصدار ٢١: رقم الحصة (p)، وتفاصيل التسميع (t نصاً، ts للسورة والآيات)، ورسم الملاحظة المكتوبة ولونها (g، c)
-      ...(b.p ? { p: Number(b.p) } : {}), ...(b.t ? { t: String(b.t) } : {}), ...(b.ts && typeof b.ts === 'object' ? { ts: b.ts } : {}), ...(b.g ? { g: String(b.g) } : {}), ...(b.c ? { c: String(b.c) } : {}) })),
+      ...(b.p ? { p: Number(b.p) } : {}), ...(b.t ? { t: String(b.t) } : {}), ...(b.ts && typeof b.ts === 'object' ? { ts: b.ts } : {}), ...(b.g ? { g: String(b.g) } : {}), ...(b.c ? { c: String(b.c) } : {}), ...(b.src ? { src: String(b.src) } : {}) })),
     // الحضور: لكل فصل ولكل يوم: حالة من لم يكن حاضراً (الباقون حاضرون)
     att: d.att && typeof d.att === 'object' ? d.att : {},
     // درجات أعمال السنة: marksYW[sid][k]

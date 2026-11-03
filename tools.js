@@ -336,6 +336,7 @@ Views.settings = () => `<header class="home-h"><div><h1>الإعدادات</h1><
     <p class="hint">كل تقييم يؤثر في أي بند:</p>
     <div class="ev-edit">${T.evals.map((e) => `<div class="eve"><i class="mini" style="--c:${e.c}">${ic(e.g)}</i><span class="grow">${esc(e.name)} <small class="hint" dir="ltr">${fmt1(e.w)}</small></span><select data-input="eve-y" data-k="${e.k}">${[...T.yw.map((y) => [y.k, y.name]), ['', 'لا يؤثر']].map(([k, n]) => `<option value="${k}"${evalYW(e) === k ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select></div>`).join('')}</div>` : ''}</div>
   ${Sync.settingsHTML()}
+  ${kushoofCard()}
   <div class="card"><h3>نسخة احتياطية</h3><p class="hint">بياناتك في هذا الجوال فقط. احفظ نسخة من حين لآخر.</p>
     <div class="row2"><button type="button" class="ghost-btn" data-act="bk-out">${ic('down')} احفظ نسخة</button><label class="ghost-btn file">${ic('up')} استرجع نسخة<input type="file" id="bkIn" accept=".json,application/json" hidden></label></div></div>
   <div class="card"><button type="button" class="red-btn wide" data-act="wipe">امسح كل البيانات</button></div>
