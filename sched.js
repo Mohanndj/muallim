@@ -157,7 +157,15 @@ Acts['cn-w'] = (el) => { cn.w = Number(el.dataset.w); refresh(); };
 Acts['cn-save'] = () => {
   const t = (cn.t || '').trim();
   if (!t) { $('cnT').focus(); toast('اكتب الملاحظة'); return; }
-  const b = addBeh(cn.sid, { k: NOTE_K, name: t, w: cn.w }, { g: cn.g, c: cn.c });
+  // تُحفظ تقييماً دائماً في القائمة كالمضاف من الإعدادات (واسم موجود يُستعمل تقييمه)
+  let e = T.evals.find((x) => x.name === t);
+  if (!e) {
+    let k = noteKey(t);
+    if (evalOf(k)) k = uid();
+    e = { k, name: t, g: cn.g, c: cn.c, w: cn.w };
+    T.evals.push(e);
+  }
+  const b = addBeh(cn.sid, e);
   const back = cn.back;
   cn = null;
   save();

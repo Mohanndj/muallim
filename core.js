@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 25;
+const APP_VERSION = 26;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -66,17 +66,26 @@ function normalize(d) {
   const arr = (x) => (Array.isArray(x) ? x : []);
   const st = d.settings || {};
   const evals = arr(d.evals).filter((e) => e && e.k && e.name).map((e) => ({ k: String(e.k), name: String(e.name), g: faName(e.g) ? e.g : 'check', c: String(e.c || '#5fcf80'), w: Number(e.w) || 0, ...(typeof e.y === 'string' ? { y: e.y } : {}) }));
+  // الإصدار ٢٦: الملاحظة بأيقونة صارت تقييماً دائماً في القائمة؛ ما سُجّل منها قبل ذلك (icon = '_n') يُنقل إلى تقييم بمفتاح ثابت من اسمه
+  const evs = evals.length ? evals : EVAL_DEFAULT.map(([k, name, g, c, w]) => ({ k, name, g, c, w }));
+  const behs = arr(d.beh).filter((b) => b && b.id && b.sid).map((b) => ({ id: b.id, sid: b.sid, d: b.d || today(), at: b.at || Date.now(), icon: String(b.icon || ''), reason: String(b.reason || ''), w: typeof b.w === 'number' ? b.w : b.kind === 'neg' ? -1 : 1,
+      // الإصدار ٢١: رقم الحصة (p)، وتفاصيل التسميع (t نصاً، ts للسورة والآيات)، ورسم الملاحظة المكتوبة ولونها (g، c)
+      ...(b.p ? { p: Number(b.p) } : {}), ...(b.t ? { t: String(b.t) } : {}), ...(b.ts && typeof b.ts === 'object' ? { ts: b.ts } : {}), ...(b.g ? { g: String(b.g) } : {}), ...(b.c ? { c: String(b.c) } : {}), ...(b.src ? { src: String(b.src) } : {}) }));
+  for (const b of behs) {
+    if (b.icon !== NOTE_K) continue;
+    const k = noteKey(b.reason);
+    if (!evs.some((e) => e.k === k)) evs.push({ k, name: b.reason, g: faName(b.g) ? b.g : 'note-sticky', c: b.c || '#3f8ee6', w: b.w });
+    b.icon = k;
+  }
   return {
     ...d,
     settings: { ...st, teacher: String(st.teacher || ''), subject: String(st.subject || 'الدراسات الإسلامية'), school: String(st.school || '') },
-    evals: evals.length ? evals : EVAL_DEFAULT.map(([k, name, g, c, w]) => ({ k, name, g, c, w })),
+    evals: evs,
     yw: arr(d.yw).length ? d.yw : YW_DEFAULT.map(([k, name, max]) => ({ k, name, max })),
     classes: arr(d.classes).filter((c) => c && c.id).map((c) => ({ id: c.id, name: String(c.name || '') })),
     students: arr(d.students).filter((s) => s && s.id).map((s) => ({ id: s.id, cls: s.cls || '', name: String(s.name || ''), parent: String(s.parent || ''), phone: String(s.phone || '') })),
     // تقييم: الأيقونة (k) واسمها ودرجتها وقت التسجيل
-    beh: arr(d.beh).filter((b) => b && b.id && b.sid).map((b) => ({ id: b.id, sid: b.sid, d: b.d || today(), at: b.at || Date.now(), icon: String(b.icon || ''), reason: String(b.reason || ''), w: typeof b.w === 'number' ? b.w : b.kind === 'neg' ? -1 : 1,
-      // الإصدار ٢١: رقم الحصة (p)، وتفاصيل التسميع (t نصاً، ts للسورة والآيات)، ورسم الملاحظة المكتوبة ولونها (g، c)
-      ...(b.p ? { p: Number(b.p) } : {}), ...(b.t ? { t: String(b.t) } : {}), ...(b.ts && typeof b.ts === 'object' ? { ts: b.ts } : {}), ...(b.g ? { g: String(b.g) } : {}), ...(b.c ? { c: String(b.c) } : {}), ...(b.src ? { src: String(b.src) } : {}) })),
+    beh: behs,
     // الحضور: لكل فصل ولكل يوم: حالة من لم يكن حاضراً (الباقون حاضرون)
     att: d.att && typeof d.att === 'object' ? d.att : {},
     // درجات أعمال السنة: marksYW[sid][k]
@@ -106,6 +115,8 @@ const behOf = (sid) => T.beh.filter((b) => b.sid === sid);
 const evalOf = (k) => T.evals.find((e) => e.k === k);
 // رسم التقييم ولونه؛ والملاحظة المكتوبة بأيقونة (icon = '_n') تحمل رسمها ولونها
 const NOTE_K = '_n';
+// مفتاح ثابت من اسم الملاحظة، فيتطابق في الجهازين عند المزامنة
+const noteKey = (t) => { let h = 0; for (const ch of String(t)) h = (h * 31 + ch.codePointAt(0)) >>> 0; return `n${h.toString(36)}`; };
 const behLook = (b) => { const e = evalOf(b.icon); return e ? { g: e.g, c: e.c } : { g: b.g && faName(b.g) ? b.g : 'check', c: b.c || '#9aa3ad' }; };
 const scoreOf = (sid) => behOf(sid).reduce((n, b) => n + b.w, 0);
 const attOf = (s, d = today()) => ((T.att[s.cls] || {})[d] || {})[s.id] || 'p';
