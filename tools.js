@@ -36,6 +36,7 @@ function onSheetClose() {
   clearInterval(toolTimer); toolTimer = null;
   if (mic) { mic.getTracks().forEach((t) => t.stop()); mic = null; }
   evalBack = null;
+  if (typeof scanEnd === 'function') scanEnd();
   if (pfD) { pfOrphans(); pfD = null; }
 }
 Acts.tool = (el) => (logAct(`tool:${el.dataset.k}`), { minute: () => countdown('الدقيقة الواحدة', 60, true), timer: () => timerSheet(), peer: peerSheet, pick: pickSheet, notes: notesSheet, calm: calmSheet, groups: groupsSheet, secret: secretSheet }[el.dataset.k])();

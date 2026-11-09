@@ -197,7 +197,7 @@ Views.exams = () => (UI.ex && exOf(UI.ex) ? (UI.exCls && clsOf(UI.exCls) ? viewE
 function viewExams() {
   const list = exams().slice().sort((a, b) => (b.d || '').localeCompare(a.d || ''));
   return `<header class="home-h"><div><h1>الاختبارات</h1><p>أعدّ أسئلتك واطبعها وصحّحها، وتنتقل الدرجات وحدها</p></div>
-      <div class="round-btns"><button type="button" class="round" data-act="ex-new" aria-label="اختبار جديد">${ic('plus')}</button></div></header>
+      <div class="round-btns"><button type="button" class="round" data-act="scan-open" aria-label="صوّر أوراق الاختبار" title="صوّر أوراق الاختبار">${ic('camera')}</button><button type="button" class="round" data-act="ex-new" aria-label="اختبار جديد">${ic('plus')}</button></div></header>
     ${list.length ? `<div class="ex-list">${list.map((x) => {
       const cls = Object.keys(x.res || {}).filter((c) => clsOf(c));
       return `<button type="button" class="ex-card" data-act="go" data-h="#exams/${x.id}"><i>${ic('file-pen')}</i><span class="grow"><b>${esc(x.title)}</b>
@@ -293,6 +293,7 @@ function viewExam(x) {
     <div class="card"><h3>${ic('print')} الطباعة</h3><div class="ex-print">
       <button type="button" class="ghost-btn" data-act="ex-print" data-m="a">نموذج أ</button><button type="button" class="ghost-btn" data-act="ex-print" data-m="b">نموذج ب</button><button type="button" class="ghost-btn" data-act="ex-print" data-m="key">نموذج الإجابة</button></div>
       <p class="hint">نموذج ب: الأسئلة نفسها بترتيب آخر حتى لا ينقل الطالب من جاره.</p></div>
+    <button type="button" class="scan-bar" data-act="scan-open" data-ex="${x.id}"><i>${ic('camera')}</i><span><b>صوّر أوراق الطلاب</b><small>تُجمع في ملف PDF ترسله إلى Claude ليصححها</small></span>${ic('next', 'chev')}</button>
     <div class="card"><h3>${ic('check')} التصحيح ورصد الدرجات</h3>${T.classes.length ? T.classes.map((c) => { const st = exStats(x, c.id); return `<button type="button" class="ex-cls" data-act="go" data-h="#exams/${x.id}/${c.id}"><span class="grow"><b>${esc(c.name)}</b>
       <small>${st.done || st.sc.length ? `صُحّح ${st.done} من ${st.n}${st.sc.length ? ` | المتوسط ${fmtScore(Math.round(st.avg * 10) / 10)} من ${fmtScore(st.tot)}` : ''}` : 'لم يُصحَّح بعد'}</small></span><span class="blue-btn sm">صحّح</span></button>`; }).join('') : '<p class="hint">أضف فصلاً أولاً.</p>'}</div>`;
 }
@@ -333,7 +334,7 @@ function viewExGrade(x, cls) {
   const R = exRes(x, cls), st = exStats(x, cls), tot = exTotal(x);
   const hard = x.qs.filter((q) => q.type !== 'text').map((q) => { const got = Object.values(R).filter((r) => !r.abs && (r.a || {})[q.id] !== undefined); return { q, n: got.length, ok: got.filter((r) => r.a[q.id] === q.ans).length }; }).filter((h) => h.n).sort((a, b) => a.ok / a.n - b.ok / b.n).slice(0, 3);
   return `<header class="cls-h"><button type="button" class="round" data-act="go" data-h="#exams/${x.id}" aria-label="رجوع">${ic('back')}</button><h1>${esc(clsOf(cls).name)}</h1>
-      <div class="round-btns"><button type="button" class="round" data-act="ex-res-print" aria-label="اطبع النتائج">${ic('print')}</button></div></header>
+      <div class="round-btns"><button type="button" class="round" data-act="scan-open" data-ex="${x.id}" data-cls="${cls}" aria-label="صوّر أوراق الفصل" title="صوّر أوراق الفصل">${ic('camera')}</button><button type="button" class="round" data-act="ex-res-print" aria-label="اطبع النتائج">${ic('print')}</button></div></header>
     <p class="hint ex-lesson">${ic('file-pen')} ${esc(x.title)} | الدرجة ${fmtScore(tot)}</p>
     ${st.sc.length ? `<section class="ex-hero"><div><b>${fmtScore(Math.round(st.avg * 10) / 10)}</b><small>المتوسط</small></div><div><b>${fmtScore(st.hi)}</b><small>الأعلى</small></div><div><b>${fmtScore(st.lo)}</b><small>الأدنى</small></div><div><b>${st.pass} من ${st.sc.length}</b><small>نجحوا</small></div></section>
       ${hard.length ? `<div class="card"><h3>${ic('circle-exclamation')} أصعب الأسئلة عليهم</h3>${hard.map((h) => `<div class="li"><span class="grow">${esc(h.q.q)}</span><b class="${h.ok / h.n < 0.5 ? 'red' : ''}">${Math.round((h.ok / h.n) * 100)}%</b></div>`).join('')}<p class="hint">نسبة من أجاب إجابة صحيحة.</p></div>` : ''}
