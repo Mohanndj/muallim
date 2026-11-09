@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 24;
+const APP_VERSION = 25;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -148,6 +148,8 @@ function normPhone(s) {
   return p;
 }
 const phoneOk = (p) => /^\d{9,15}$/.test(p || '');
+// علامة عند اسم الطالب الذي حُفظ جوال ولي أمره (الإصدار ٢٥)
+const phoneMark = (s) => (phoneOk(s.phone) ? `<i class="ph-mark" title="جوال ولي الأمر محفوظ" aria-label="جوال ولي الأمر محفوظ">${ic('whatsapp')}</i>` : '');
 const waLink = (phone, text) => `https://wa.me/${phone || ''}?text=${encodeURIComponent(text)}`;
 
 // ---- الإطار: العنوان يحدد الصفحة، وزر الرجوع في أندرويد يرجع خطوة ----

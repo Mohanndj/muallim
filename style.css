@@ -675,3 +675,8 @@ a.wa-btn, a.link { text-decoration: none; }
 .k-miss { color: var(--red); font-style: normal; font-size: .78rem; }
 .card .file.wide { display: flex; width: 100%; }
 .sm-card label > select { display: block; width: 100%; margin-top: 6px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); font: inherit; }
+/* الإصدار ٢٥: علامة جوال ولي الأمر عند اسم الطالب */
+.ph-mark { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--wa); color: #fff; vertical-align: middle; margin-inline-start: 6px; font-style: normal; }
+.ph-mark .ic { width: 12px; height: 12px; }
+.bd-s .ph-mark { width: 16px; height: 16px; margin-inline-start: 4px; }
+.bd-s .ph-mark .ic { width: 10px; height: 10px; }

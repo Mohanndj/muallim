@@ -339,7 +339,7 @@ function viewExGrade(x, cls) {
       ${hard.length ? `<div class="card"><h3>${ic('circle-exclamation')} أصعب الأسئلة عليهم</h3>${hard.map((h) => `<div class="li"><span class="grow">${esc(h.q.q)}</span><b class="${h.ok / h.n < 0.5 ? 'red' : ''}">${Math.round((h.ok / h.n) * 100)}%</b></div>`).join('')}<p class="hint">نسبة من أجاب إجابة صحيحة.</p></div>` : ''}
       <button type="button" class="wa-bar" data-act="ex-notify">${ic('send')} أرسل الدرجات لأولياء الأمور</button>` : ''}
     <div class="cards one">${studentsIn(cls).map((s) => { const r = R[s.id], v = exScore(x, r), done = exDone(x, r); return `<div class="scard ex-s" data-act="ex-grade" data-id="${s.id}">
-      <div class="sc-av">${AVATAR}</div><div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}</b>${r && r.abs ? '<span class="st-pill" style="--c:#ef4b5f">غائب</span>' : v !== null ? `<span class="pill-blue${done ? '' : ' part'}">${fmtScore(v)} / ${fmtScore(tot)}</span>` : '<span class="st-pill" style="--c:#c7c7cc">صحّح</span>'}</div>
+      <div class="sc-av">${AVATAR}</div><div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}${phoneMark(s)}</b>${r && r.abs ? '<span class="st-pill" style="--c:#ef4b5f">غائب</span>' : v !== null ? `<span class="pill-blue${done ? '' : ' part'}">${fmtScore(v)} / ${fmtScore(tot)}</span>` : '<span class="st-pill" style="--c:#c7c7cc">صحّح</span>'}</div>
       ${v !== null ? `<div class="ex-bar"><i style="width:${(v / tot) * 100}%"></i></div>` : ''}</div></div>`; }).join('')}</div>`;
 }
 Acts['ex-grade'] = (el) => { exGr = { sid: el.dataset.id, b: exGr ? exGr.b : false, quick: false }; openSheet(exGradeHTML(), exGradeHTML, 'gray'); };

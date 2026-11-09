@@ -200,7 +200,7 @@ function bdHTML() {
     <div class="bd-tabs"><button type="button" class="${bd.mode === 'ev' ? 'on' : ''}" data-act="bd-mode" data-m="ev">${ic('star')} التقييم</button><button type="button" class="${bd.mode === 'att' ? 'on' : ''}" data-act="bd-mode" data-m="att">${ic('user-check')} الحضور${absent ? ` (${absent})` : ''}</button></div>
     ${bd.mode === 'att' ? `<div class="bd-st">${ATT.slice(1).map(([k, n, g, c]) => `<button type="button" class="${bd.st === k ? 'on' : ''}" style="--c:${c}" data-act="bd-st" data-v="${k}"><i>${ic(g)}</i>${n}</button>`).join('')}</div>
       <p class="hint">اضغط اسم الطالب يصير «${attInfo(bd.st)[1]}»، والضغطة الثانية تعيده حاضراً.</p>` : ''}
-    <div class="bd-grid">${list.map((s) => { const v = attOf(s), A = attInfo(v), sc = scoreOf(s.id); return `<button type="button" class="bd-s${v !== 'p' ? ' off' : ''}" style="--c:${A[3]}" data-act="bd-s" data-id="${s.id}"><span>${esc(shortName(s))}</span>${v !== 'p' ? `<em>${A[1]}</em>` : `<small class="${sc < 0 ? 'neg' : ''}">${fmtScore(sc)}</small>`}</button>`; }).join('')}</div>
+    <div class="bd-grid">${list.map((s) => { const v = attOf(s), A = attInfo(v), sc = scoreOf(s.id); return `<button type="button" class="bd-s${v !== 'p' ? ' off' : ''}" style="--c:${A[3]}" data-act="bd-s" data-id="${s.id}"><span>${esc(shortName(s))}${phoneMark(s)}</span>${v !== 'p' ? `<em>${A[1]}</em>` : `<small class="${sc < 0 ? 'neg' : ''}">${fmtScore(sc)}</small>`}</button>`; }).join('')}</div>
     ${bd.mode === 'att' ? `<button type="button" class="ghost-btn wide" data-act="bd-allp">${ic('users')} الكل حاضر</button>` : ''}`;
 }
 Acts['bd-mode'] = (el) => { bd.mode = el.dataset.m; refresh(); };

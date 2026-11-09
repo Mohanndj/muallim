@@ -60,7 +60,7 @@ function viewFollow() {
       const slots = Array.from({ length: 10 }, (_, i) => used[pg * 10 + i]);
       return `<div class="scard${sel && sel.has(s.id) ? ' sel' : ''}" data-act="eval-open" data-id="${s.id}">
         <div class="sc-av" data-act="stu-data" data-id="${s.id}" role="button" aria-label="بيانات الطالب">${AVATAR}</div>
-        <div class="sc-body"><div class="sc-top"><span class="sc-nm"><b class="sc-name">${esc(s.name)}</b>${stuTags(s, cleanWeeks(s, st))}</span><span class="sc-x"><span class="pill-blue${scoreOf(s.id) < 0 ? ' neg' : ''}">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
+        <div class="sc-body"><div class="sc-top"><span class="sc-nm"><b class="sc-name">${esc(s.name)}${phoneMark(s)}</b>${stuTags(s, cleanWeeks(s, st))}</span><span class="sc-x"><span class="pill-blue${scoreOf(s.id) < 0 ? ' neg' : ''}">${fmtScore(scoreOf(s.id))}</span><button type="button" class="dots" data-act="stu-more" data-id="${s.id}" aria-label="خيارات">${ic('more')}</button></span></div>
           <div class="slots">${slots.map((u) => { if (!u) return '<i class="slot"></i>'; const L = evalOf(u.k) || u; return `<i class="slot on" style="--c:${L.c}" title="${esc(u.name)}" data-act="slot-open" data-id="${s.id}" data-k="${esc(u.k)}" data-name="${esc(u.name)}">${ic(L.g)}${u.n > 1 ? `<b>${u.n}</b>` : ''}</i>`; }).join('')}</div>
           ${attMini(s)}
           <div class="quick">${quickEvals().map((e) => `<button type="button" style="--c:${e.c}" data-act="qev" data-id="${s.id}" data-k="${e.k}"><i>${ic(e.g)}</i>${esc(e.name.length > 9 ? `${e.name.slice(0, 9)}…` : e.name)}</button>`).join('')}</div>
@@ -210,7 +210,7 @@ function viewAtt() {
     <div class="att-sum">${ATT.filter(([k]) => counts[k] || k === 'p').map(([k, n, g, c]) => `<div style="--c:${c}"><i>${ic(g)}</i><span>${counts[k] || 0} ${n}</span></div>`).join('')}</div>
     ${counts.a && d === today() ? `<button type="button" class="wa-bar" data-act="abs-notify">${ic('send')} أبلغ أولياء الغائبين (${counts.a})</button>` : ''}
     <div class="cards one">${all.filter(match).map((s) => { const v = attOf(s, d); const [, vn, , vc] = attInfo(v); return `<div class="scard att">
-      <div class="sc-av">${AVATAR}</div><div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}</b><span class="st-pill" style="--c:${v === 'p' ? '#66c470' : vc}">${vn}</span></div>
+      <div class="sc-av">${AVATAR}</div><div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}${phoneMark(s)}</b><span class="st-pill" style="--c:${v === 'p' ? '#66c470' : vc}">${vn}</span></div>
       <div class="att-btns">${ATT.map(([k, n, g, c]) => `<button type="button" class="${v === k ? 'on' : ''}" style="--c:${c}" data-act="att-set" data-id="${s.id}" data-v="${k}"><i>${ic(g)}</i><span>${n}</span></button>`).join('')}</div></div></div>`; }).join('')}</div>`;
 }
 document.addEventListener('change', (e) => { if (e.target.id === 'attDate' && e.target.value) { UI.date = e.target.value > today() ? today() : e.target.value; render(); } });
@@ -235,7 +235,7 @@ function viewYW() {
     ${filters(false)}
     <div class="yw-bulk"><span>${ic('pen')} ارصد لكل الفصل:</span>${T.yw.map((y) => `<button type="button" class="chip" data-act="yw-bulk" data-k="${y.k}">${esc(y.name)}</button>`).join('')}</div>
     <div class="cards one">${list.filter(match).map((s) => { const done = T.yw.some((y) => ywMark(s.id, y.k) !== null); return `<div class="scard yw">
-      <div class="sc-av">${AVATAR}</div><div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}</b><span class="pill-blue">${done ? fmtScore(ywTotal(s.id)) : fmtScore(scoreOf(s.id))}</span></div>
+      <div class="sc-av">${AVATAR}</div><div class="sc-body"><div class="sc-top"><b class="sc-name">${esc(s.name)}${phoneMark(s)}</b><span class="pill-blue">${done ? fmtScore(ywTotal(s.id)) : fmtScore(scoreOf(s.id))}</span></div>
       <div class="yw-boxes">${T.yw.map((y) => { const v = ywMark(s.id, y.k), d = behYW(s.id, y.k), r = v === null ? -1 : v / y.max; return `<button type="button" class="ywb${v === null ? '' : ` set ${r >= 0.8 ? 'hi' : r >= 0.5 ? 'mid' : 'lo'}`}" data-act="yw-edit" data-id="${s.id}" data-k="${y.k}"><small>${esc(y.name)}</small><b>${v === null ? y.max : fmtScore(v)}</b>${d ? `<em class="${d > 0 ? 'up' : 'down'}">${d > 0 ? '+' : ''}${fmtScore(d)}</em>` : ''}</button>`; }).join('')}</div></div></div>`; }).join('')}</div>`;
 }
 // رصد سريع: الدرجة ثم «التالي» للبند التالي فالطالب التالي
