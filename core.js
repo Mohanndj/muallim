@@ -2,7 +2,7 @@
 // «مساعد المعلم» (الإصدار ٤، بشكل «كشوف» وطريقته للاستعمال الشخصي): الحالة والحفظ والأدوات المشتركة والإطار.
 // كل شيء في هذا الجوال فقط (localStorage)؛ لا يُرسل شيء إلا رسائل واتساب التي يرسلها المعلم بنفسه.
 
-const APP_VERSION = 23;
+const APP_VERSION = 24;
 const KEY = 'muallim-v1';
 const $ = (id) => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -169,8 +169,10 @@ function go(hash, replace = false) {
   render();
   enter();
 }
-// دخول الصفحة الجديدة بحركة خفيفة (عند الانتقال فقط، لا عند كل تحديث)
-function enter() { const m = $('main'); m.classList.remove('enter'); void m.offsetWidth; m.classList.add('enter'); }
+// دخول الصفحة الجديدة بحركة خفيفة (عند الانتقال فقط، لا عند كل تحديث): الصنف يُزال بعد انتهائها،
+// وإلا أعاد كل رسم (الحضور، التقييم) الحركة فبدت الصفحة كأنها تُفتح من جديد
+let enterTimer;
+function enter() { const m = $('main'); m.classList.remove('enter'); void m.offsetWidth; m.classList.add('enter'); clearTimeout(enterTimer); enterTimer = setTimeout(() => m.classList.remove('enter'), 450); }
 function render() {
   const y = window.scrollY;
   const a = document.activeElement;
