@@ -680,3 +680,12 @@ a.wa-btn, a.link { text-decoration: none; }
 .ph-mark .ic { width: 12px; height: 12px; }
 .bd-s .ph-mark { width: 16px; height: 16px; margin-inline-start: 4px; }
 .bd-s .ph-mark .ic { width: 10px; height: 10px; }
+/* الإصدار ٢٧: من بقي بلا رقم */
+.np-bar { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: var(--card); border-radius: 16px; padding: 8px 12px; margin: -4px 0 12px; box-shadow: var(--shadow); text-align: start; }
+.np-bar i { width: 30px; height: 30px; border-radius: 50%; background: #e9ecef; color: #8e8e93; display: grid; place-items: center; flex: none; font-style: normal; }
+.np-bar i .ic { width: 15px; height: 15px; }
+.np-bar span { flex: 1; font-size: .92rem; }
+.np-bar b { color: var(--red); }
+.np-bar em { font-style: normal; color: var(--blue); font-weight: 700; font-size: .85rem; display: inline-flex; align-items: center; gap: 4px; }
+.np-bar em .ic { width: 12px; height: 12px; }
+p.center { text-align: center; }

@@ -30,8 +30,39 @@ Views.home = () => {
 // ---- رأس صفحة الفصل ----
 function classHead(extra = '') {
   return `<header class="cls-h"><button type="button" class="round" data-act="back" aria-label="رجوع">${ic('back')}</button><h1>${esc(clsOf(UI.cls).name)}</h1>
-    <div class="round-btns">${extra}</div></header>`;
+    <div class="round-btns">${extra}</div></header>${npBar()}`;
 }
+// الإصدار ٢٧: عدّاد من بقي بلا رقم في رأس صفحة الفصل، وتنقّل بينهم واحداً بعد الآخر لإكمال أرقامهم
+const npList = () => studentsIn(UI.cls).filter((s) => !phoneOk(s.phone));
+function npBar() {
+  const n = npList().length;
+  return n ? `<button type="button" class="np-bar" data-act="np-open"><i>${ic('whatsapp')}</i><span>بلا رقم: <b>${n}</b> ${n > 2 && n < 11 ? 'طلاب' : 'طالباً'}</span><em>الطالب التالي بلا رقم ${ic('next')}</em></button>` : '';
+}
+let npI = 0;
+Acts['np-open'] = () => { npI = 0; openSheet(npHTML(), npHTML, 'gray'); npFocus(); };
+const npFocus = () => setTimeout(() => $('npIn') && $('npIn').focus(), 80);
+function npHTML() {
+  const list = npList();
+  if (!list.length) return '';
+  npI = Math.min(npI, list.length - 1);
+  const s = list[npI];
+  return `<form data-submit="np-save" data-id="${s.id}"><div class="ev-head small">${AVATAR}<b>${esc(s.name)}</b><span class="ex-live" dir="rtl">${npI + 1} من ${list.length}</span></div>
+    <label>جوال ولي الأمر (واتساب)<input id="npIn" name="phone" inputmode="tel" dir="ltr" placeholder="05xxxxxxxx" enterkeyhint="next" autocomplete="off"></label>
+    <div class="row2"><button class="blue-btn">${ic('check')} احفظ والتالي</button><button type="button" class="ghost-btn" data-act="np-skip"${list.length > 1 ? '' : ' disabled'}>الطالب التالي بلا رقم</button></div>
+    <p class="hint center">بقي بلا رقم: ${list.length} ${list.length > 2 && list.length < 11 ? 'طلاب' : 'طالباً'}</p></form>`;
+}
+Acts['np-save'] = (f) => {
+  const v = f.elements.phone.value.trim(), phone = normPhone(v);
+  if (!v) { Acts['np-skip'](); return; }
+  if (!phoneOk(phone)) { toast('رقم الجوال غير صحيح'); $('npIn').focus(); return; }
+  const s = stuOf(f.dataset.id);
+  s.phone = phone;
+  save(); render();
+  toast(`حُفظ رقم ${shortName(s)}`);
+  if (!npList().length) { closeSheet(); toast('اكتملت أرقام الفصل'); return; }
+  refresh(); npFocus();
+};
+Acts['np-skip'] = () => { const n = npList().length; npI = n ? (npI + 1) % n : 0; refresh(); npFocus(); };
 const filters = (withDate) => `<div class="filters">${searchBar()}<div class="fbox"><small>المادة</small><span>${esc(T.settings.subject)}</span></div>
   ${withDate ? `<label class="fbox"><small>التاريخ</small><input type="date" id="attDate" value="${UI.date}" max="${today()}"></label>` : ''}</div>`;
 
